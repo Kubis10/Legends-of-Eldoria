@@ -20,7 +20,6 @@ export default class GameScene extends Phaser.Scene {
         this.createMap();        // Tworzenie gracza
         this.createPlayer();
 
-        // Tworzenie wrogów
         this.createEnemies();
 
         // NPC i interakcje specyficzne dla lokacji
@@ -39,6 +38,9 @@ export default class GameScene extends Phaser.Scene {
 
         // Klawisze sterowania
         this.setupControls();
+
+        // Setup debug hotkey after this.keys is created
+        this.setupDebugMode();
 
         // Kolizje
         this.setupCollisions();
@@ -161,6 +163,28 @@ export default class GameScene extends Phaser.Scene {
                     { key: 'enemy_orc', health: 120, damage: 24, exp: 60, name: 'Ork' }
                 ];
                 break;
+            case 'DRAGON_LAIR':
+                enemyTypes = [
+                    { key: 'enemy_skeleton', health: 90, damage: 20, exp: 45, name: 'Szkielet' }
+                ];
+                break;
+            case 'CRYSTAL_LAKE':
+                enemyTypes = [
+                    { key: 'enemy_goblin', health: 60, damage: 14, exp: 30, name: 'Goblin' },
+                    { key: 'enemy_skeleton', health: 75, damage: 16, exp: 38, name: 'Szkielet' }
+                ];
+                break;
+            case 'HAUNTED_CEMETERY':
+                enemyTypes = [
+                    { key: 'enemy_skeleton', health: 85, damage: 19, exp: 42, name: 'Szkielet' }
+                ];
+                break;
+            case 'ANCIENT_TEMPLE':
+                enemyTypes = [
+                    { key: 'enemy_orc', health: 115, damage: 23, exp: 58, name: 'Ork' },
+                    { key: 'enemy_troll', health: 160, damage: 26, exp: 80, name: 'Troll' }
+                ];
+                break;
         }
 
         // Tworzenie 16 losowych wrogów
@@ -193,6 +217,52 @@ export default class GameScene extends Phaser.Scene {
             });
 
             this.enemies.push(enemy);
+        }
+
+        // Dodaj bossa jeśli lokacja go ma
+        this.spawnBoss();
+    }
+
+    spawnBoss() {
+        const { LOCATIONS } = require('./data/locations');
+        const currentLoc = LOCATIONS[GameState.currentLocation];
+
+        if (currentLoc && currentLoc.boss) {
+            let bossData;
+            switch (currentLoc.boss) {
+                case 'boss_ancient_dragon':
+                    bossData = { key: 'enemy_dragon', health: 500, damage: 50, exp: 500, name: 'Starożytny Smok' };
+                    break;
+                case 'boss_troll_king':
+                    bossData = { key: 'enemy_troll', health: 300, damage: 35, exp: 300, name: 'Król Trolli' };
+                    break;
+                case 'boss_temple_guardian':
+                    bossData = { key: 'enemy_orc', health: 250, damage: 30, exp: 250, name: 'Strażnik Świątyni' };
+                    break;
+                default:
+                    return;
+            }
+
+            // Spawn bossa w środku mapy
+            const boss = this.physics.add.sprite(800, 800, bossData.key);
+            boss.setScale(1.5); // Większy boss
+            boss.body.setSize(40, 40);
+
+            boss.enemyData = {
+                maxHealth: bossData.health,
+                health: bossData.health,
+                damage: bossData.damage,
+                exp: bossData.exp,
+                name: bossData.name,
+                isBoss: true
+            };
+
+            boss.healthBar = this.createHealthBar(boss, bossData.health);
+
+            // Boss pozostaje w miejscu
+            this.enemies.push(boss);
+
+            this.showMessage(`⚠️ ${bossData.name} czeka na ciebie! ⚠️`, boss.x, boss.y - 100, '#ff0000');
         }
     }
 
@@ -374,21 +444,43 @@ export default class GameScene extends Phaser.Scene {
 
         // Mapa
         this.keys.map.on('down', () => this.showMap());
-    } setupCollisions() {
+    }
+
+    setupDebugMode() {
+        // Debug: F10 maksuje statystyki, złoto, odkrywa mapy
+        this.keys.debug = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F10);
+        this.keys.debug.on('down', () => {
+            try {
+                const { LOCATIONS } = require('../data/locations');
+                const all = Object.keys(LOCATIONS || {});
+                GameState.enableDebugMode(all);
+                this.showMessage('DEBUG: stats, gold, mapy odblokowane', this.player.x, this.player.y - 60, '#f39c12');
+                this.updateUI();
+            } catch (e) {
+                console.error('Debug enable failed', e);
+            }
+        });
+    }
+
+    setupCollisions() {
         // Kolizje gracza ze ścianami
         this.physics.add.collider(this.player, this.walls);
 
-        // Kolizje wrogów ze ścianami
+        // Kolizje wrogów ze ścianami (sprawdź czy wróg jest aktywny)
         this.enemies.forEach(enemy => {
-            this.physics.add.collider(enemy, this.walls);
-            enemy.setCollideWorldBounds(true); // Dodaj granice świata
+            if (enemy && enemy.active && enemy.body) {
+                this.physics.add.collider(enemy, this.walls);
+                enemy.setCollideWorldBounds(true); // Dodaj granice świata
+            }
         });
 
-        // Kolizje gracza z przedmiotami
+        // Kolizje gracza z przedmiotami (sprawdź czy przedmiot jest aktywny)
         this.items.forEach(item => {
-            this.physics.add.overlap(this.player, item, () => {
-                this.collectItem(item);
-            });
+            if (item && item.active && item.body) {
+                this.physics.add.overlap(this.player, item, () => {
+                    this.collectItem(item);
+                });
+            }
         });
     }
 

@@ -10,6 +10,7 @@ class GameState {
         this.gameTime = 0;
         this.currency = 100;
         this.currentLocation = 'STARTING_VILLAGE';
+        this.debugMode = false;
     }
 
     // Tworzenie postaci gracza
@@ -256,6 +257,30 @@ class GameState {
             return true;
         }
         return false;
+    }
+
+    // ===== DEBUG =====
+    enableDebugMode(allLocations) {
+        this.debugMode = true;
+        // Wymaksuj statystyki
+        if (this.player) {
+            this.player.level = 50;
+            this.player.experience = this.getExperienceForLevel(50);
+            this.player.attributes.maxHealth = 9999;
+            this.player.attributes.maxMana = 9999;
+            this.player.attributes.health = 9999;
+            this.player.attributes.mana = 9999;
+            this.player.attributes.strength = 999;
+            this.player.attributes.dexterity = 999;
+            this.player.attributes.intelligence = 999;
+        }
+        // Złoto
+        this.currency = 999999;
+        // Odkryj wszystkie mapy przekazane w allLocations (lista kluczy)
+        if (Array.isArray(allLocations)) {
+            this.discoveredLocations = Array.from(new Set(['STARTING_VILLAGE', ...allLocations]));
+        }
+        this.saveGame();
     }
 }
 

@@ -175,8 +175,12 @@ export default class MapScene extends Phaser.Scene {
             }
         });
 
-        // Znacznik gracza (pulsujący)
-        const playerMarker = this.add.text(centerX - 200, centerY + 50, '👤', {
+        // Znacznik gracza (pulsujący) - aktualizuj pozycję na podstawie currentLocation
+        const currentLoc = mapLocations.find(loc => loc.id === GameState.currentLocation);
+        const playerX = currentLoc ? currentLoc.x : centerX - 200;
+        const playerY = currentLoc ? currentLoc.y : centerY + 50;
+
+        const playerMarker = this.add.text(playerX, playerY, '👤', {
             fontFamily: 'Arial',
             fontSize: '24px'
         }).setOrigin(0.5);
@@ -267,7 +271,11 @@ export default class MapScene extends Phaser.Scene {
 
         // Przeładuj świat gry z nową lokacją
         this.showMessage(`Podróżujesz do: ${location.name}`, 0x3498db);
-        this.time.delayedCall(500, () => {
+
+        // Pokaż ekran ładowania
+        this.showLoadingScreen();
+
+        this.time.delayedCall(1000, () => {
             if (this.scene.isActive('GameScene')) {
                 this.scene.stop('GameScene');
             }
@@ -308,7 +316,7 @@ export default class MapScene extends Phaser.Scene {
 
     createDiscoveryStats(x, y) {
         const discovered = GameState.discoveredLocations.length;
-        const total = Object.keys(LOCATIONS).length + 3; // +3 dla dodatkowych lokacji
+        const total = Object.keys(LOCATIONS).length; // Now correctly counts all locations
 
         const stats = `Odkryto lokacji: ${discovered}/${total}`;
 
@@ -368,6 +376,36 @@ export default class MapScene extends Phaser.Scene {
         return button;
     }
 
+    showLoadingScreen() {
+        const { width, height } = this.cameras.main;
+
+        // Półprzezroczyste tło ładowania
+        this.loadingBg = this.add.rectangle(0, 0, width, height, 0x000000, 0.8)
+            .setOrigin(0)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // Tekst ładowania
+        this.loadingText = this.add.text(width / 2, height / 2, 'Ładowanie...', {
+            fontFamily: 'Arial',
+            fontSize: '32px',
+            fontStyle: 'bold',
+            color: '#f39c12'
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+        // Animacja kropek
+        let dots = '';
+        this.loadingTimer = this.time.addEvent({
+            delay: 300,
+            callback: () => {
+                dots += '.';
+                if (dots.length > 3) dots = '';
+                this.loadingText.setText(`Ładowanie${dots}`);
+            },
+            loop: true
+        });
+    }
+
     createCloseButton(x, y) {
         const button = this.add.container(x, y);
 
@@ -399,6 +437,17 @@ export default class MapScene extends Phaser.Scene {
     }
 
     close() {
+        // Cleanup loading screen if exists
+        if (this.loadingTimer) {
+            this.loadingTimer.destroy();
+        }
+        if (this.loadingBg) {
+            this.loadingBg.destroy();
+        }
+        if (this.loadingText) {
+            this.loadingText.destroy();
+        }
+
         this.scene.resume('GameScene');
         this.scene.stop();
     }

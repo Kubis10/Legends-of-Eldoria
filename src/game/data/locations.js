@@ -214,6 +214,34 @@ export const LOCATIONS = {
         description: 'Legowisko starożytnego smoka.',
         boss: 'boss_ancient_dragon',
         mapType: 'cave'
+    },
+
+    CRYSTAL_LAKE: {
+        id: 'crystal_lake',
+        name: 'Kryształowe Jezioro',
+        type: 'lake',
+        description: 'Magiczne jezioro o leczniczych właściwościach.',
+        enemies: ['enemy_skeleton', 'enemy_goblin'],
+        mapType: 'forest'
+    },
+
+    HAUNTED_CEMETERY: {
+        id: 'haunted_cemetery',
+        name: 'Nawiedzony Cmentarz',
+        type: 'cemetery',
+        description: 'Stary cmentarz pełen niespokojnych duchów.',
+        enemies: ['enemy_skeleton', 'enemy_skeleton'],
+        mapType: 'dungeon'
+    },
+
+    ANCIENT_TEMPLE: {
+        id: 'ancient_temple',
+        name: 'Starożytna Świątynia',
+        type: 'temple',
+        description: 'Ruiny starożytnej świątyni pełnej zagadek.',
+        enemies: ['enemy_orc', 'enemy_troll'],
+        boss: 'boss_temple_guardian',
+        mapType: 'dungeon'
     }
 };
 

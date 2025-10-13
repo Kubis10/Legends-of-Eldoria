@@ -1,70 +1,207 @@
-# Getting Started with Create React App
+# 🎮 Legends of Eldoria
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+![Legends of Eldoria](https://img.shields.io/badge/Game-RPG-blueviolet)
+![React](https://img.shields.io/badge/React-18.2.0-blue)
+![Phaser](https://img.shields.io/badge/Phaser-3.70.0-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-## Available Scripts
+## 📖 Opis
 
-In the project directory, you can run:
+**Legends of Eldoria** to gra RPG osadzona w fantastycznym świecie Eldorii, pełnym magii, przygód i niebezpieczeństw. Gracz wciela się w postać bohatera, który wyrusza na wielką podróż, aby odkryć tajemnice zapomnianych ruin, pokonać potężnych bossów i zbadać nieznane obszary.
 
-### `npm start`
+## ✨ Cechy gry
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### 🎨 Tworzenie postaci
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- Wybór spośród 4 ras: Człowiek, Elf, Krasnolud, Ork
+- 4 klasy postaci: Wojownik, Mag, Łotrzyk, Strażnik
+- Customizacja imienia i wyglądu postaci
+- Unikalne bonusy i umiejętności dla każdej kombinacji rasy i klasy
 
-### `npm test`
+### 🗺️ Eksploracja
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Otwarty świat z różnorodnymi lokacjami
+- Proceduralne generowanie dungeonów i jaskiń
+- Ukryte skarby i tajemne przejścia
+- Wiele typów terenu: lasy, jaskinie, ruiny, wioski
 
-### `npm run build`
+### ⚔️ System walki
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Dynamiczny system walki w czasie rzeczywistym
+- Umiejętności specjalne dla każdej klasy
+- System many i punktów zdrowia
+- Różnorodne typy wrogów z unikalnymi zachowaniami
+- Epickie walki z bossami
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 📜 Questy
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Rozbudowana fabuła główna
+- Liczne zadania poboczne
+- Zlecenia od NPC
+- System nagród (doświadczenie, złoto, przedmioty)
 
-### `npm run eject`
+### 📊 Rozwój postaci
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- System poziomów i doświadczenia
+- Automatyczne ulepszanie atrybutów przy awansie
+- Ekwipunek i system przedmiotów
+- Zbroje, bronie i akcesoria
+- Mikstury zdrowia i many
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 💬 Interakcje z NPC
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- Dialogi z mieszkańcami Eldorii
+- Kupcy oferujący przedmioty
+- Kowale ulepszający ekwipunek
+- Tajemniczy wędrowcy z legendarnymi questami
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🎮 Sterowanie
 
-## Learn More
+### Poruszanie się
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **W/↑** - Ruch w górę
+- **S/↓** - Ruch w dół
+- **A/←** - Ruch w lewo
+- **D/→** - Ruch w prawo
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Akcje
 
-### Code Splitting
+- **SPACJA** - Atak podstawowy
+- **1-4** - Użycie umiejętności specjalnych
+- **E** - Interakcja/zbieranie przedmiotów
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Menu
 
-### Analyzing the Bundle Size
+- **I** - Ekwipunek (w przyszłych wersjach)
+- **Q** - Lista questów (w przyszłych wersjach)
+- **M** - Mapa (w przyszłych wersjach)
+- **ESC** - Menu pauzy
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🚀 Uruchomienie gry
 
-### Making a Progressive Web App
+### Wymagania
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- Node.js 14.0 lub nowszy
+- npm lub yarn
 
-### Advanced Configuration
+### Instalacja
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+1. Sklonuj repozytorium:
 
-### Deployment
+```bash
+git clone https://github.com/yourusername/legends-of-eldoria.git
+cd legends-of-eldoria
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+2. Zainstaluj zależności:
 
-### `npm run build` fails to minify
+```bash
+npm install
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+3. Uruchom grę w trybie deweloperskim:
+
+```bash
+npm start
+```
+
+4. Otwórz przeglądarkę i wejdź na:
+
+```
+http://localhost:3000
+```
+
+### Build produkcyjny
+
+```bash
+npm run build
+```
+
+## 🏗️ Struktura projektu
+
+```
+legends-of-eldoria/
+├── public/
+│   ├── index.html
+│   ├── manifest.json
+│   └── robots.txt
+├── src/
+│   ├── game/
+│   │   ├── config.js                 # Konfiguracja gry
+│   │   ├── GameState.js              # Zarządzanie stanem gry
+│   │   ├── scenes/
+│   │   │   ├── BootScene.js          # Ładowanie zasobów
+│   │   │   ├── MainMenuScene.js      # Menu główne
+│   │   │   ├── CharacterCreationScene.js  # Tworzenie postaci
+│   │   │   ├── GameScene.js          # Główna scena gry
+│   │   │   └── PauseMenuScene.js     # Menu pauzy
+│   │   └── data/
+│   │       ├── content.js            # Questy, dialogi, przedmioty
+│   │       └── locations.js          # Lokacje i generator map
+│   ├── components/
+│   │   └── game/
+│   │       └── Game.js               # Główny komponent React
+│   ├── styles/
+│   │   └── GlobalStyles.js           # Style globalne
+│   ├── App.js                        # Główna aplikacja
+│   └── index.js                      # Punkt wejścia
+└── package.json
+```
+
+## 🛠️ Technologie
+
+- **React 18.2.0** - Framework UI
+- **Phaser 3.70.0** - Engine gry 2D
+- **Styled Components 6.1.8** - Stylowanie CSS-in-JS
+- **Create React App** - Konfiguracja projektu
+
+## 📋 Funkcje do implementacji
+
+### W trakcie rozwoju:
+
+- [ ] System ekwipunku i inwentarza
+- [ ] Rozbudowany interfejs questów
+- [ ] System dialogów z wyborami
+- [ ] Sklepy i handel z NPC
+- [ ] Większa różnorodność lokacji
+- [ ] Animacje postaci i wrogów
+- [ ] System dźwięku i muzyki
+- [ ] Multiplayer (długoterminowy plan)
+
+### Gotowe:
+
+- [x] Tworzenie postaci
+- [x] System walki podstawowy
+- [x] Eksploracja świata
+- [x] System poziomów
+- [x] Zapisywanie/wczytywanie gry
+- [x] Menu główne i pauza
+- [x] Podstawowy system questów
+
+## 🤝 Wkład w projekt
+
+Chcesz pomóc w rozwoju gry? Wspaniale!
+
+1. Fork projektu
+2. Stwórz branch z nową funkcją (`git checkout -b feature/AmazingFeature`)
+3. Commit zmian (`git commit -m 'Add some AmazingFeature'`)
+4. Push do brancha (`git push origin feature/AmazingFeature`)
+5. Otwórz Pull Request
+
+## 📝 Licencja
+
+Ten projekt jest dostępny na licencji MIT. Zobacz plik `LICENSE` dla szczegółów.
+
+## 👨‍💻 Autor
+
+Projekt stworzony z pasją do gier RPG i programowania.
+
+## 🙏 Podziękowania
+
+- **Phaser Team** - za wspaniały engine do tworzenia gier
+- **React Team** - za potężny framework UI
+- **Społeczność gamedev** - za inspirację i wsparcie
+
+---
+
+**Miłej zabawy w Eldorii! ⚔️🛡️🏰**

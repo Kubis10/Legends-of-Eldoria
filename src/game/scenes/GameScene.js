@@ -1,0 +1,573 @@
+import Phaser from 'phaser';
+import GameState from '../GameState';
+
+export default class GameScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'GameScene' });
+        this.player = null;
+        this.enemies = [];
+        this.items = [];
+        this.map = null;
+        this.uiElements = {};
+    }
+
+    create() {
+        // Tworzenie prostej mapy
+        this.createMap();        // Tworzenie gracza
+        this.createPlayer();
+
+        // Tworzenie wrogów
+        this.createEnemies();
+
+        // Tworzenie przedmiotów
+        this.createItems();
+
+        // Tworzenie UI
+        this.createUI();
+
+        // Kamera śledzi gracza
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        this.cameras.main.setZoom(1);
+
+        // Klawisze sterowania
+        this.setupControls();
+
+        // Kolizje
+        this.setupCollisions();
+    }
+
+    createMap() {
+        // Prosta mapa z kafelkami
+        const mapWidth = 50;
+        const mapHeight = 50;
+        const tileSize = 32;
+
+        this.map = this.add.group();
+
+        for (let y = 0; y < mapHeight; y++) {
+            for (let x = 0; x < mapWidth; x++) {
+                const worldX = x * tileSize;
+                const worldY = y * tileSize;
+
+                // Losowe wybieranie terenu
+                let tileType = 'tile_grass';
+                const rand = Math.random();
+
+                if (rand < 0.1) {
+                    tileType = 'tile_stone';
+                } else if (rand < 0.15) {
+                    tileType = 'tile_water';
+                }
+
+                // Ściany na krawędziach
+                if (x === 0 || x === mapWidth - 1 || y === 0 || y === mapHeight - 1) {
+                    tileType = 'tile_wall';
+                }
+
+                const tile = this.add.sprite(worldX, worldY, tileType)
+                    .setOrigin(0);
+
+                this.map.add(tile);
+            }
+        }
+
+        // Losowe ściany wewnętrzne
+        for (let i = 0; i < 50; i++) {
+            const x = Phaser.Math.Between(2, mapWidth - 3);
+            const y = Phaser.Math.Between(2, mapHeight - 3);
+            const wall = this.add.sprite(x * tileSize, y * tileSize, 'tile_wall')
+                .setOrigin(0);
+            this.physics.add.existing(wall);
+            wall.body.setImmovable(true);
+            this.map.add(wall);
+        }
+    }
+
+    createPlayer() {
+        const playerData = GameState.player;
+        const classKey = playerData.class.toLowerCase();
+        const spriteKey = `player_${classKey}`;
+
+        this.player = this.physics.add.sprite(400, 400, spriteKey);
+        this.player.setCollideWorldBounds(true);
+        this.player.setScale(1);
+        this.player.body.setSize(28, 28);
+
+        // Dane gracza
+        this.player.playerData = playerData;
+    }
+
+    createEnemies() {
+        const enemyTypes = [
+            { key: 'enemy_goblin', health: 50, damage: 10, exp: 25, name: 'Goblin' },
+            { key: 'enemy_skeleton', health: 70, damage: 15, exp: 35, name: 'Szkielet' },
+            { key: 'enemy_orc', health: 100, damage: 20, exp: 50, name: 'Ork' },
+            { key: 'enemy_troll', health: 150, damage: 25, exp: 75, name: 'Troll' }
+        ];
+
+        // Tworzenie 20 losowych wrogów
+        for (let i = 0; i < 20; i++) {
+            const enemyType = Phaser.Utils.Array.GetRandom(enemyTypes);
+            const x = Phaser.Math.Between(100, 1500);
+            const y = Phaser.Math.Between(100, 1500);
+
+            const enemy = this.physics.add.sprite(x, y, enemyType.key);
+            enemy.setScale(1);
+            enemy.body.setSize(28, 28);
+
+            // Dane wroga
+            enemy.enemyData = {
+                maxHealth: enemyType.health,
+                health: enemyType.health,
+                damage: enemyType.damage,
+                exp: enemyType.exp,
+                name: enemyType.name
+            };
+
+            // Pasek zdrowia
+            enemy.healthBar = this.createHealthBar(enemy, enemyType.health);
+
+            // Losowe poruszanie się
+            this.time.addEvent({
+                delay: Phaser.Math.Between(2000, 5000),
+                callback: () => this.moveEnemyRandomly(enemy),
+                loop: true
+            });
+
+            this.enemies.push(enemy);
+        }
+    }
+
+    createItems() {
+        const itemTypes = [
+            { key: 'item_potion', type: 'potion', value: 50, name: 'Mikstura zdrowia' },
+            { key: 'item_gold', type: 'gold', value: 50, name: 'Złoto' },
+            { key: 'item_chest', type: 'chest', value: 100, name: 'Skrzynia' }
+        ];
+
+        // Tworzenie przedmiotów
+        for (let i = 0; i < 15; i++) {
+            const itemType = Phaser.Utils.Array.GetRandom(itemTypes);
+            const x = Phaser.Math.Between(100, 1500);
+            const y = Phaser.Math.Between(100, 1500);
+
+            const item = this.physics.add.sprite(x, y, itemType.key);
+            item.itemData = itemType;
+
+            this.items.push(item);
+        }
+    }
+
+    createUI() {
+        const { width, height } = this.cameras.main;
+
+        // UI jest nieruchome względem kamery
+        const uiContainer = this.add.container(0, 0).setScrollFactor(0);
+
+        // Panel gracza (lewy górny róg)
+        const playerPanel = this.add.rectangle(10, 10, 250, 120, 0x2c3e50, 0.9)
+            .setOrigin(0);
+
+        const playerName = this.add.text(20, 20, GameState.player.name, {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            fontStyle: 'bold',
+            color: '#f39c12'
+        });
+
+        const playerLevel = this.add.text(20, 45, `Poziom: ${GameState.player.level}`, {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            color: '#ffffff'
+        });
+
+        // Paski zdrowia i many
+        this.uiElements.healthBarBg = this.add.rectangle(20, 75, 220, 15, 0x7f8c8d)
+            .setOrigin(0);
+        this.uiElements.healthBar = this.add.rectangle(20, 75, 220, 15, 0xe74c3c)
+            .setOrigin(0);
+
+        this.uiElements.manaBarBg = this.add.rectangle(20, 95, 220, 15, 0x7f8c8d)
+            .setOrigin(0);
+        this.uiElements.manaBar = this.add.rectangle(20, 95, 220, 15, 0x3498db)
+            .setOrigin(0);
+
+        this.uiElements.healthText = this.add.text(130, 75, '', {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            color: '#ffffff'
+        }).setOrigin(0.5, 0);
+
+        this.uiElements.manaText = this.add.text(130, 95, '', {
+            fontFamily: 'Arial',
+            fontSize: '12px',
+            color: '#ffffff'
+        }).setOrigin(0.5, 0);
+
+        uiContainer.add([
+            playerPanel, playerName, playerLevel,
+            this.uiElements.healthBarBg, this.uiElements.healthBar, this.uiElements.healthText,
+            this.uiElements.manaBarBg, this.uiElements.manaBar, this.uiElements.manaText
+        ]);
+
+        // Panel umiejętności (dolny środek)
+        const skillsY = height - 80;
+        const skillsPanel = this.add.rectangle(width / 2 - 250, skillsY, 500, 70, 0x2c3e50, 0.9)
+            .setOrigin(0)
+            .setScrollFactor(0);
+
+        uiContainer.add(skillsPanel);
+
+        // Wyświetlanie umiejętności
+        GameState.player.skills.forEach((skill, index) => {
+            const skillX = width / 2 - 220 + index * 120;
+            const skillButton = this.add.rectangle(skillX, skillsY + 10, 100, 50, 0x34495e)
+                .setOrigin(0)
+                .setScrollFactor(0);
+
+            const skillText = this.add.text(skillX + 50, skillsY + 35, `${index + 1}\n${skill.name}`, {
+                fontFamily: 'Arial',
+                fontSize: '12px',
+                color: '#ffffff',
+                align: 'center'
+            }).setOrigin(0.5).setScrollFactor(0);
+
+            uiContainer.add([skillButton, skillText]);
+        });
+
+        // Instrukcje (prawy górny róg)
+        const instructions = this.add.text(width - 10, 10,
+            'WASD - Ruch\nSPACJA - Atak\n1-4 - Umiejętności\nE - Zbierz\nESC - Menu', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#ffffff',
+            align: 'right'
+        }).setOrigin(1, 0).setScrollFactor(0);
+
+        uiContainer.add(instructions);
+
+        this.updateUI();
+    }
+
+    setupControls() {
+        this.keys = {
+            up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+            down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+            left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+            right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+            attack: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+            interact: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+            skill1: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
+            skill2: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
+            skill3: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
+            skill4: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
+            menu: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
+        };
+
+        // Obsługa ataku
+        this.keys.attack.on('down', () => this.performAttack());
+
+        // Obsługa interakcji
+        this.keys.interact.on('down', () => this.performInteraction());
+
+        // Obsługa umiejętności
+        this.keys.skill1.on('down', () => this.useSkill(0));
+        this.keys.skill2.on('down', () => this.useSkill(1));
+        this.keys.skill3.on('down', () => this.useSkill(2));
+        this.keys.skill4.on('down', () => this.useSkill(3));
+
+        // Menu pauzy
+        this.keys.menu.on('down', () => this.showPauseMenu());
+    }
+
+    setupCollisions() {
+        // Kolizje gracza z przedmiotami
+        this.items.forEach(item => {
+            this.physics.add.overlap(this.player, item, () => {
+                this.collectItem(item);
+            });
+        });
+    }
+
+    update() {
+        if (!this.player) return;
+
+        // Poruszanie gracza
+        const speed = 200;
+        this.player.setVelocity(0);
+
+        if (this.keys.up.isDown) {
+            this.player.setVelocityY(-speed);
+        } else if (this.keys.down.isDown) {
+            this.player.setVelocityY(speed);
+        }
+
+        if (this.keys.left.isDown) {
+            this.player.setVelocityX(-speed);
+        } else if (this.keys.right.isDown) {
+            this.player.setVelocityX(speed);
+        }
+
+        // Normalizacja prędkości przy ruchu po przekątnej
+        if (this.player.body.velocity.x !== 0 && this.player.body.velocity.y !== 0) {
+            this.player.setVelocity(
+                this.player.body.velocity.x * 0.707,
+                this.player.body.velocity.y * 0.707
+            );
+        }
+
+        // Aktualizacja pasków zdrowia wrogów
+        this.enemies.forEach(enemy => {
+            if (enemy.healthBar) {
+                enemy.healthBar.x = enemy.x - 16;
+                enemy.healthBar.y = enemy.y - 20;
+            }
+        });
+
+        // Automatyczne zapisywanie co minutę
+        if (!this.lastSave || Date.now() - this.lastSave > 60000) {
+            GameState.saveGame();
+            this.lastSave = Date.now();
+        }
+    }
+
+    performAttack() {
+        const attackRange = 50;
+        const damage = 20 + GameState.player.attributes.strength * 2;
+
+        // Znajdź najbliższego wroga w zasięgu
+        let closestEnemy = null;
+        let closestDistance = attackRange;
+
+        this.enemies.forEach(enemy => {
+            const distance = Phaser.Math.Distance.Between(
+                this.player.x, this.player.y,
+                enemy.x, enemy.y
+            );
+
+            if (distance < closestDistance) {
+                closestEnemy = enemy;
+                closestDistance = distance;
+            }
+        });
+
+        if (closestEnemy) {
+            this.damageEnemy(closestEnemy, damage);
+        }
+    }
+
+    useSkill(index) {
+        const skill = GameState.player.skills[index];
+        if (!skill) return;
+
+        // Sprawdź czy gracz ma wystarczająco many
+        if (GameState.player.attributes.mana < skill.manaCost) {
+            this.showMessage('Niewystarczająco many!', this.player.x, this.player.y - 50);
+            return;
+        }
+
+        // Odejmij manę
+        GameState.player.attributes.mana -= skill.manaCost;
+
+        // Wykonaj umiejętność
+        const attackRange = 100;
+        const damage = skill.damage + GameState.player.attributes.intelligence * 2;
+
+        // Znajdź wroga w zasięgu
+        let closestEnemy = null;
+        let closestDistance = attackRange;
+
+        this.enemies.forEach(enemy => {
+            const distance = Phaser.Math.Distance.Between(
+                this.player.x, this.player.y,
+                enemy.x, enemy.y
+            );
+
+            if (distance < closestDistance) {
+                closestEnemy = enemy;
+                closestDistance = distance;
+            }
+        });
+
+        if (closestEnemy) {
+            this.damageEnemy(closestEnemy, damage);
+            this.showMessage(`${skill.name}!`, this.player.x, this.player.y - 50);
+        }
+
+        this.updateUI();
+    }
+
+    damageEnemy(enemy, damage) {
+        enemy.enemyData.health -= damage;
+
+        // Pokaż obrażenia
+        this.showMessage(`-${damage}`, enemy.x, enemy.y - 30, '#e74c3c');
+
+        // Animacja obrażeń
+        this.tweens.add({
+            targets: enemy,
+            alpha: 0.5,
+            duration: 100,
+            yoyo: true
+        });
+
+        // Aktualizuj pasek zdrowia
+        this.updateEnemyHealthBar(enemy);
+
+        // Jeśli wróg zginął
+        if (enemy.enemyData.health <= 0) {
+            this.killEnemy(enemy);
+        }
+    }
+
+    killEnemy(enemy) {
+        // Dodaj doświadczenie
+        GameState.addExperience(enemy.enemyData.exp);
+        this.showMessage(`+${enemy.enemyData.exp} EXP`, enemy.x, enemy.y, '#f39c12');
+
+        // Usuń wroga
+        const index = this.enemies.indexOf(enemy);
+        if (index > -1) {
+            this.enemies.splice(index, 1);
+        }
+
+        if (enemy.healthBar) {
+            enemy.healthBar.destroy();
+        }
+
+        enemy.destroy();
+        this.updateUI();
+    }
+
+    collectItem(item) {
+        const itemData = item.itemData;
+
+        if (itemData.type === 'potion') {
+            GameState.player.attributes.health = Math.min(
+                GameState.player.attributes.health + itemData.value,
+                GameState.player.attributes.maxHealth
+            );
+            this.showMessage(`+${itemData.value} HP`, item.x, item.y, '#2ecc71');
+        } else if (itemData.type === 'gold') {
+            GameState.currency += itemData.value;
+            this.showMessage(`+${itemData.value} złota`, item.x, item.y, '#f1c40f');
+        } else if (itemData.type === 'chest') {
+            const gold = Phaser.Math.Between(50, 200);
+            GameState.currency += gold;
+            this.showMessage(`Skrzynia! +${gold} złota`, item.x, item.y, '#f39c12');
+        }
+
+        const index = this.items.indexOf(item);
+        if (index > -1) {
+            this.items.splice(index, 1);
+        }
+
+        item.destroy();
+        this.updateUI();
+        GameState.saveGame();
+    }
+
+    performInteraction() {
+        const interactRange = 60;
+
+        // Znajdź najbliższy przedmiot
+        this.items.forEach(item => {
+            const distance = Phaser.Math.Distance.Between(
+                this.player.x, this.player.y,
+                item.x, item.y
+            );
+
+            if (distance < interactRange) {
+                this.collectItem(item);
+            }
+        });
+    }
+
+    moveEnemyRandomly(enemy) {
+        if (!enemy.active) return;
+
+        const direction = Phaser.Math.Between(0, 7);
+        const speed = 50;
+
+        switch (direction) {
+            case 0: enemy.setVelocity(0, -speed); break;
+            case 1: enemy.setVelocity(speed, -speed); break;
+            case 2: enemy.setVelocity(speed, 0); break;
+            case 3: enemy.setVelocity(speed, speed); break;
+            case 4: enemy.setVelocity(0, speed); break;
+            case 5: enemy.setVelocity(-speed, speed); break;
+            case 6: enemy.setVelocity(-speed, 0); break;
+            case 7: enemy.setVelocity(-speed, -speed); break;
+            default: enemy.setVelocity(0, 0); break;
+        }
+
+        this.time.delayedCall(1000, () => {
+            if (enemy.active) {
+                enemy.setVelocity(0);
+            }
+        });
+    }
+
+    createHealthBar(enemy, maxHealth) {
+        const bar = this.add.graphics();
+        bar.maxHealth = maxHealth;
+        return bar;
+    }
+
+    updateEnemyHealthBar(enemy) {
+        const healthBar = enemy.healthBar;
+        if (!healthBar) return;
+
+        const barWidth = 32;
+        const barHeight = 4;
+        const healthPercent = enemy.enemyData.health / enemy.enemyData.maxHealth;
+
+        healthBar.clear();
+        healthBar.fillStyle(0x000000);
+        healthBar.fillRect(enemy.x - 16, enemy.y - 20, barWidth, barHeight);
+        healthBar.fillStyle(0xe74c3c);
+        healthBar.fillRect(enemy.x - 16, enemy.y - 20, barWidth * healthPercent, barHeight);
+    }
+
+    updateUI() {
+        const player = GameState.player;
+
+        // Aktualizuj paski zdrowia i many
+        const healthPercent = player.attributes.health / player.attributes.maxHealth;
+        const manaPercent = player.attributes.mana / player.attributes.maxMana;
+
+        this.uiElements.healthBar.width = 220 * healthPercent;
+        this.uiElements.manaBar.width = 220 * manaPercent;
+
+        this.uiElements.healthText.setText(
+            `HP: ${Math.floor(player.attributes.health)}/${player.attributes.maxHealth}`
+        );
+        this.uiElements.manaText.setText(
+            `MP: ${Math.floor(player.attributes.mana)}/${player.attributes.maxMana}`
+        );
+    }
+
+    showMessage(text, x, y, color = '#ffffff') {
+        const message = this.add.text(x, y, text, {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            fontStyle: 'bold',
+            color: color,
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: message,
+            y: y - 50,
+            alpha: 0,
+            duration: 1500,
+            onComplete: () => message.destroy()
+        });
+    }
+
+    showPauseMenu() {
+        this.scene.pause();
+        this.scene.launch('PauseMenuScene');
+    }
+}

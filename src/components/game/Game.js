@@ -1,15 +1,17 @@
 import React, { Component } from 'react';
 import Phaser from 'phaser';
+import BootScene from '../../game/scenes/BootScene';
+import MainMenuScene from '../../game/scenes/MainMenuScene';
+import CharacterCreationScene from '../../game/scenes/CharacterCreationScene';
+import GameScene from '../../game/scenes/GameScene';
+import PauseMenuScene from '../../game/scenes/PauseMenuScene';
 
 class Game extends Component {
     componentDidMount() {
         this.initializeGame();
-        this.resizeGame();
-        window.addEventListener('resize', this.resizeGame);
     }
 
     componentWillUnmount() {
-        window.removeEventListener('resize', this.resizeGame);
         if (this.game) {
             this.game.destroy(true);
         }
@@ -19,45 +21,43 @@ class Game extends Component {
         const config = {
             type: Phaser.AUTO,
             parent: 'game-container',
-            width: '100%',
-            height: '100%',
+            width: 1280,
+            height: 720,
             scale: {
-                mode: Phaser.Scale.RESIZE,
+                mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH
             },
-            scene: {
-                preload: this.preload,
-                create: this.create,
-                update: this.update
-            }
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: [
+                BootScene,
+                MainMenuScene,
+                CharacterCreationScene,
+                GameScene,
+                PauseMenuScene
+            ],
+            backgroundColor: '#000000'
         };
 
         this.game = new Phaser.Game(config);
     }
 
-    preload() {
-        // Metoda wczytywania zasobów gry (np. grafiki, dźwięki)
-        // Tutaj należy wczytać wszystkie potrzebne zasoby
-    }
-
-    create() {
-        // Metoda tworzenia gry, wywoływana po wczytaniu zasobów
-        // Tutaj należy zainicjalizować wszystkie obiekty gry
-    }
-
-    update() {
-        // Metoda aktualizacji gry, wywoływana w każdej klatce animacji
-        // Tutaj należy umieścić logikę gry, np. ruch postaci, kolizje, itp.
-    }
-
-    resizeGame = () => {
-        const { innerWidth, innerHeight } = window;
-        this.game.scale.resize(innerWidth, innerHeight);
-    }
-
     render() {
         return (
-            <div id="game-container" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+            <div id="game-container" style={{
+                width: '100vw',
+                height: '100vh',
+                overflow: 'hidden',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#000000'
+            }}>
                 {/* Kontener, w którym będzie renderowana gra */}
             </div>
         );

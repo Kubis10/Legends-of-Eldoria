@@ -36,8 +36,8 @@ export default class MapScene extends Phaser.Scene {
         // Legenda (lewy dolny róg)
         this.createLegend(panelX - panelWidth / 2 + 40, panelY + panelHeight / 2 - 140);
 
-        // Informacje o lokacji (środek, wyżej)
-        this.locationInfo = this.add.text(panelX, panelY + panelHeight / 2 - 110, '', {
+        // Informacje o lokacji (środek, niżej żeby nie zachodziły na inne elementy)
+        this.locationInfo = this.add.text(panelX, panelY + panelHeight / 2 - 60, '', {
             fontFamily: 'Arial',
             fontSize: '15px',
             color: '#ffffff',

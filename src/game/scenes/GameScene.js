@@ -224,7 +224,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     spawnBoss() {
-        const { LOCATIONS } = require('./data/locations');
+        const { LOCATIONS } = require('../data/locations');
         const currentLoc = LOCATIONS[GameState.currentLocation];
 
         if (currentLoc && currentLoc.boss) {
@@ -262,7 +262,9 @@ export default class GameScene extends Phaser.Scene {
             // Boss pozostaje w miejscu
             this.enemies.push(boss);
 
-            this.showMessage(`⚠️ ${bossData.name} czeka na ciebie! ⚠️`, boss.x, boss.y - 100, '#ff0000');
+            // Pokaż ostrzeżenie na środku ekranu
+            const { width, height } = this.cameras.main;
+            this.showMessage(`⚠️ ${bossData.name} czeka na ciebie! ⚠️`, width / 2, height / 2 - 100, '#ff0000');
         }
     }
 

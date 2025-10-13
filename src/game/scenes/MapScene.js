@@ -249,6 +249,12 @@ export default class MapScene extends Phaser.Scene {
         const location = LOCATIONS[locationId];
         if (!location) return;
 
+        // Tylko odkryte lokacje są dostępne do podróży
+        if (!GameState.discoveredLocations.includes(locationId)) {
+            this.showMessage('Ta lokacja jest jeszcze zablokowana.', 0xe74c3c);
+            return;
+        }
+
         // Zapisz nową lokację
         GameState.currentLocation = locationId;
 
@@ -259,8 +265,15 @@ export default class MapScene extends Phaser.Scene {
 
         GameState.saveGame();
 
-        // Możesz tutaj dodać logikę przejścia do nowej lokacji
+        // Przeładuj świat gry z nową lokacją
         this.showMessage(`Podróżujesz do: ${location.name}`, 0x3498db);
+        this.time.delayedCall(500, () => {
+            if (this.scene.isActive('GameScene')) {
+                this.scene.stop('GameScene');
+            }
+            this.scene.stop();
+            this.scene.launch('GameScene');
+        });
     }
 
     createLegend(x, y) {

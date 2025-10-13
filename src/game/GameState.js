@@ -169,7 +169,49 @@ class GameState {
             }
         });
         this.saveGame();
-    }    // Zapisywanie i wczytywanie gry
+    }
+
+    // Postępy inne niż zabijanie
+    onGoldCollected(amount) {
+        this.quests.forEach(quest => {
+            if (!quest.objectives) return;
+            quest.objectives.forEach(obj => {
+                if (obj.type === 'collect_gold') {
+                    obj.current = (obj.current || 0) + amount;
+                    if (obj.current > obj.count) obj.current = obj.count;
+                }
+            });
+        });
+        this.saveGame();
+    }
+
+    onChestOpened() {
+        this.quests.forEach(quest => {
+            if (!quest.objectives) return;
+            quest.objectives.forEach(obj => {
+                if (obj.type === 'open_chest') {
+                    obj.current = (obj.current || 0) + 1;
+                    if (obj.current > obj.count) obj.current = obj.count;
+                }
+            });
+        });
+        this.saveGame();
+    }
+
+    onPotionUsed() {
+        this.quests.forEach(quest => {
+            if (!quest.objectives) return;
+            quest.objectives.forEach(obj => {
+                if (obj.type === 'use_potion') {
+                    obj.current = (obj.current || 0) + 1;
+                    if (obj.current > obj.count) obj.current = obj.count;
+                }
+            });
+        });
+        this.saveGame();
+    }
+
+    // Zapisywanie i wczytywanie gry
     saveGame() {
         const saveData = {
             player: this.player,
@@ -180,6 +222,7 @@ class GameState {
             defeatedEnemies: this.defeatedEnemies,
             gameTime: this.gameTime,
             currency: this.currency,
+            currentLocation: this.currentLocation,
             timestamp: Date.now()
         };
         localStorage.setItem('legends_of_eldoria_save', JSON.stringify(saveData));
@@ -191,6 +234,7 @@ class GameState {
         if (savedData) {
             const data = JSON.parse(savedData);
             Object.assign(this, data);
+            if (!this.currentLocation) this.currentLocation = 'STARTING_VILLAGE';
             return true;
         }
         return false;
@@ -202,6 +246,16 @@ class GameState {
 
     hasSave() {
         return localStorage.getItem('legends_of_eldoria_save') !== null;
+    }
+
+    // Odkrywanie lokacji (zwraca true jeśli nowo odkryta)
+    unlockLocation(locationId) {
+        if (!this.discoveredLocations.includes(locationId)) {
+            this.discoveredLocations.push(locationId);
+            this.saveGame();
+            return true;
+        }
+        return false;
     }
 }
 

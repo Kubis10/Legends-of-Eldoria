@@ -308,6 +308,19 @@ export default class QuestScene extends Phaser.Scene {
             this.showMessage(`Otrzymano: ${item.name}`, 0x9b59b6);
         }
 
+        // Progresja świata po ważnych questach
+        if (quest.id === 'main_1') {
+            const unlocked = GameState.unlockLocation('DARK_FOREST');
+            if (unlocked) {
+                this.showMessage('Odkryto nową lokację: Mroczny Las!', 0x2ecc71);
+            }
+        } else if (quest.id === 'main_2') {
+            const unlocked = GameState.unlockLocation('ABANDONED_RUINS');
+            if (unlocked) {
+                this.showMessage('Odkryto nową lokację: Opuszczone Ruiny!', 0x2ecc71);
+            }
+        }
+
         this.scene.restart();
     }
 

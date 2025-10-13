@@ -69,6 +69,11 @@ export default class BootScene extends Phaser.Scene {
         this.createEnemyIcon('enemy_orc', 32, 32, 0x16a085);
         this.createEnemyIcon('enemy_troll', 40, 40, 0x8e44ad);
         this.createEnemyIcon('enemy_dragon', 48, 48, 0xc0392b, true);
+
+        // NPC (proste ikony)
+        this.createNPCIcon('npc_elder', 32, 32, 0xf1c40f);       // złoty
+        this.createNPCIcon('npc_merchant', 32, 32, 0x3498db);    // niebieski
+        this.createNPCIcon('npc_blacksmith', 32, 32, 0x95a5a6);  // stalowy
     }
 
     // ===== Helpers: drawing utilities =====
@@ -414,6 +419,23 @@ export default class BootScene extends Phaser.Scene {
         g.strokeCircle(w / 2, h / 2, 9);
         g.lineStyle(2, 0xffffff, 0.6);
         g.strokeCircle(w / 2, h / 2, 11);
+        g.generateTexture(key, w, h);
+        g.destroy();
+    }
+
+    // ===== NPC icons =====
+    createNPCIcon(key, w, h, color) {
+        const g = this.add.graphics();
+        // cień
+        g.fillStyle(0x000000, 0.2);
+        g.fillEllipse(w / 2 + 2, h - 4, w * 0.6, 6);
+        // szata/tunika
+        this.drawVerticalGradient(g, 4, 10, w - 8, h - 12, color, Phaser.Display.Color.ValueToColor(color).darken(20).color, 8);
+        g.lineStyle(2, 0x000000, 0.5);
+        g.strokeRect(4.5, 10.5, w - 9, h - 13);
+        // głowa
+        g.fillStyle(0xffe0bd, 1);
+        g.fillCircle(w / 2, 8, 4);
         g.generateTexture(key, w, h);
         g.destroy();
     }

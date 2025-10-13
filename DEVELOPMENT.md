@@ -1,32 +1,3 @@
-# Art and UI Overhaul Notes
-
-This project uses Phaser to procedurally generate temporary but polished textures at runtime.
-
-What changed:
-
-- Procedural textures for panels, buttons, slots, cards, tiles, item icons, characters, and enemies are generated in `BootScene.createGeneratedAssets()`.
-- Scenes (`MainMenuScene`, `GameScene`, `InventoryScene`, `QuestScene`, `MapScene`, `PauseMenuScene`, `ShopScene`, `CharacterCreationScene`, `LevelUpScene`) now consume these textures for a consistent look.
-
-Where to add real art later:
-
-- Replace procedural textures with real assets by placing files under `public/assets/` and loading in `BootScene.preload()` via `this.load.image('key', 'path')`.
-- Suggested keys:
-  - UI: ui_panel_small, ui_panel_medium, ui_panel_inventory, ui_panel_skillbar, ui_button_small, ui_button_large, ui_slot, ui_slot_wide, ui_equipped, ui_card_quest, ui_card_item
-  - Tiles: tile_grass, tile_stone, tile_water, tile_wall, tile_door
-  - Items: icon_weapon, icon_armor, icon_potion_red, icon_gold, icon_chest, icon_accessory
-  - Entities: player_warrior, player_mage, player_rogue, player_ranger, enemy_goblin, enemy_skeleton, enemy_orc, enemy_troll, enemy_dragon
-
-Recommendations:
-
-- Provide @2x versions for 64px tiles and 96x96 icons, then scale down via Phaser for crisp rendering on HiDPI.
-- Consider 9-slice panels for scalable UI when moving to image assets.
-- When adding fonts, load a webfont and set a global style to replace Arial.
-
-Optimization ideas:
-
-- Switch to WebGL-only if targeting modern browsers, enable mipmaps for downscaling, and cache textures.
-- If moving away from procedural generation, pre-bake assets to WebP with PNG fallback.
-
 # Legends of Eldoria - Dokumentacja Deweloperska
 
 ## Architektura gry

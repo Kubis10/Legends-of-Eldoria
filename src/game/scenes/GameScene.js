@@ -23,6 +23,9 @@ export default class GameScene extends Phaser.Scene {
         // Tworzenie wrogów
         this.createEnemies();
 
+        // NPC i interakcje specyficzne dla lokacji
+        this.createLocationContent();
+
         // Tworzenie przedmiotów
         this.createItems();
 
@@ -58,11 +61,23 @@ export default class GameScene extends Phaser.Scene {
                 // Losowe wybieranie terenu
                 let tileType = 'tile_grass';
                 const rand = Math.random();
+                const loc = GameState.currentLocation;
 
-                if (rand < 0.1) {
-                    tileType = 'tile_stone';
-                } else if (rand < 0.15) {
-                    tileType = 'tile_water';
+                // Prosty klimat kafelków zależnie od lokacji
+                if (loc === 'DARK_FOREST') {
+                    if (rand < 0.15) tileType = 'tile_wall';
+                    else if (rand < 0.2) tileType = 'tile_water';
+                    else tileType = 'tile_grass';
+                } else if (loc === 'ABANDONED_RUINS') {
+                    if (rand < 0.25) tileType = 'tile_stone';
+                    else if (rand < 0.28) tileType = 'tile_wall';
+                    else tileType = 'tile_grass';
+                } else if (loc === 'MOUNTAIN_CAVE') {
+                    if (rand < 0.4) tileType = 'tile_wall';
+                    else tileType = 'tile_stone';
+                } else {
+                    if (rand < 0.1) tileType = 'tile_stone';
+                    else if (rand < 0.15) tileType = 'tile_water';
                 }
 
                 // Ściany na krawędziach
@@ -119,15 +134,37 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createEnemies() {
-        const enemyTypes = [
-            { key: 'enemy_goblin', health: 50, damage: 10, exp: 25, name: 'Goblin' },
-            { key: 'enemy_skeleton', health: 70, damage: 15, exp: 35, name: 'Szkielet' },
-            { key: 'enemy_orc', health: 100, damage: 20, exp: 50, name: 'Ork' },
-            { key: 'enemy_troll', health: 150, damage: 25, exp: 75, name: 'Troll' }
-        ];
+        // Zależnie od aktualnej lokacji wybierz pule przeciwników
+        let enemyTypes = [];
+        switch (GameState.currentLocation) {
+            case 'STARTING_VILLAGE':
+            default:
+                enemyTypes = [
+                    { key: 'enemy_goblin', health: 50, damage: 10, exp: 25, name: 'Goblin' }
+                ];
+                break;
+            case 'DARK_FOREST':
+                enemyTypes = [
+                    { key: 'enemy_goblin', health: 55, damage: 12, exp: 28, name: 'Goblin' },
+                    { key: 'enemy_skeleton', health: 70, damage: 15, exp: 35, name: 'Szkielet' }
+                ];
+                break;
+            case 'ABANDONED_RUINS':
+                enemyTypes = [
+                    { key: 'enemy_skeleton', health: 80, damage: 18, exp: 40, name: 'Szkielet' },
+                    { key: 'enemy_orc', health: 110, damage: 22, exp: 55, name: 'Ork' }
+                ];
+                break;
+            case 'MOUNTAIN_CAVE':
+                enemyTypes = [
+                    { key: 'enemy_troll', health: 150, damage: 25, exp: 75, name: 'Troll' },
+                    { key: 'enemy_orc', health: 120, damage: 24, exp: 60, name: 'Ork' }
+                ];
+                break;
+        }
 
-        // Tworzenie 20 losowych wrogów
-        for (let i = 0; i < 20; i++) {
+        // Tworzenie 16 losowych wrogów
+        for (let i = 0; i < 16; i++) {
             const enemyType = Phaser.Utils.Array.GetRandom(enemyTypes);
             const x = Phaser.Math.Between(100, 1500);
             const y = Phaser.Math.Between(100, 1500);
@@ -156,6 +193,34 @@ export default class GameScene extends Phaser.Scene {
             });
 
             this.enemies.push(enemy);
+        }
+    }
+
+    createLocationContent() {
+        // W wiosce: dodaj prostych NPC z interakcją do sklepu i questów
+        if (GameState.currentLocation === 'STARTING_VILLAGE') {
+            this.npcs = [];
+            const elder = this.physics.add.sprite(450, 420, 'npc_elder').setImmovable(true);
+            elder.npcData = { id: 'VILLAGE_ELDER', name: 'Starszy Wioski', type: 'quest_giver' };
+            const merchant = this.physics.add.sprite(520, 380, 'npc_merchant').setImmovable(true);
+            merchant.npcData = { id: 'MERCHANT', name: 'Kupiec', type: 'shop' };
+            const blacksmith = this.physics.add.sprite(380, 380, 'npc_blacksmith').setImmovable(true);
+            blacksmith.npcData = { id: 'BLACKSMITH', name: 'Kowal', type: 'shop' };
+
+            this.npcs.push(elder, merchant, blacksmith);
+
+            // Kolizje z NPC aby nie przenikać
+            this.npcs.forEach(npc => {
+                this.physics.add.collider(this.player, npc);
+            });
+
+            // Proste dymki nad głową
+            this.npcs.forEach(npc => {
+                const label = this.add.text(npc.x, npc.y - 28, npc.npcData.name, {
+                    fontFamily: 'Arial', fontSize: '12px', color: '#f1c40f', stroke: '#000', strokeThickness: 3
+                }).setOrigin(0.5);
+                npc.label = label;
+            });
         }
     }
 
@@ -258,7 +323,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Instrukcje (prawy górny róg)
         const instructions = this.add.text(width - 10, 10,
-            'WASD - Ruch\nSPACJA - Atak\n1-4 - Umiejętności\nE - Zbierz\nI - Ekwipunek\nQ - Questy\nM - Mapa\nESC - Menu', {
+            'WASD - Ruch\nSPACJA - Atak\n1-4 - Umiejętności\nE - Interakcja/Zbierz\nI - Ekwipunek\nQ - Questy\nM - Mapa\nESC - Menu', {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: '#ffffff',
@@ -528,13 +593,17 @@ export default class GameScene extends Phaser.Scene {
                 GameState.player.attributes.maxHealth
             );
             this.showMessage(`+${itemData.value} HP`, item.x, item.y, '#2ecc71');
+            GameState.onPotionUsed();
         } else if (itemData.type === 'gold') {
             GameState.currency += itemData.value;
             this.showMessage(`+${itemData.value} złota`, item.x, item.y, '#f1c40f');
+            GameState.onGoldCollected(itemData.value);
         } else if (itemData.type === 'chest') {
             const gold = Phaser.Math.Between(50, 200);
             GameState.currency += gold;
             this.showMessage(`Skrzynia! +${gold} złota`, item.x, item.y, '#f39c12');
+            GameState.onChestOpened();
+            GameState.onGoldCollected(gold);
         }
 
         const index = this.items.indexOf(item);
@@ -549,6 +618,24 @@ export default class GameScene extends Phaser.Scene {
 
     performInteraction() {
         const interactRange = 60;
+
+        // Interakcja z NPC (w wiosce)
+        if (this.npcs && this.npcs.length) {
+            for (const npc of this.npcs) {
+                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+                if (dist < interactRange) {
+                    if (npc.npcData.type === 'shop') {
+                        this.scene.pause();
+                        this.scene.launch('ShopScene', { shopkeeper: npc.npcData.id });
+                        return;
+                    } else if (npc.npcData.type === 'quest_giver') {
+                        this.scene.pause();
+                        this.scene.launch('QuestScene');
+                        return;
+                    }
+                }
+            }
+        }
 
         // Znajdź najbliższy przedmiot
         this.items.forEach(item => {

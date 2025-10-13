@@ -677,6 +677,7 @@ export default class GameScene extends Phaser.Scene {
 
     createHealthBar(enemy, maxHealth) {
         const bar = this.add.graphics();
+        bar.setDepth(5);
         bar.maxHealth = maxHealth;
         return bar;
     }
@@ -690,10 +691,11 @@ export default class GameScene extends Phaser.Scene {
         const healthPercent = enemy.enemyData.health / enemy.enemyData.maxHealth;
 
         healthBar.clear();
+        // Rysuj względem pozycji grafiki (0,0) – pozycjonowanie jest ustawiane w update()
         healthBar.fillStyle(0x000000);
-        healthBar.fillRect(enemy.x - 16, enemy.y - 20, barWidth, barHeight);
+        healthBar.fillRect(0, 0, barWidth, barHeight);
         healthBar.fillStyle(0xe74c3c);
-        healthBar.fillRect(enemy.x - 16, enemy.y - 20, barWidth * healthPercent, barHeight);
+        healthBar.fillRect(0, 0, barWidth * healthPercent, barHeight);
     }
 
     updateUI() {

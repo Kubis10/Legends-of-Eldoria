@@ -14,6 +14,14 @@ export default class ShopScene extends Phaser.Scene {
 
     create() {
         const { width, height } = this.cameras.main;
+        const panelWidth = 800;
+        const panelHeight = 600;
+        const panelX = width / 2;
+        const panelY = height / 2;
+        this.panelWidth = panelWidth;
+        this.panelHeight = panelHeight;
+        this.panelX = panelX;
+        this.panelY = panelY;
 
         // Półprzezroczyste tło
         this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
@@ -21,7 +29,7 @@ export default class ShopScene extends Phaser.Scene {
             .setScrollFactor(0);
 
         // Panel sklepu
-        this.add.image(width / 2, height / 2, 'ui_panel_medium');
+        this.add.image(panelX, panelY, 'ui_panel_medium');
 
         // Tytuł
         const shopNames = {
@@ -29,28 +37,45 @@ export default class ShopScene extends Phaser.Scene {
             BLACKSMITH: '⚒️ KUŹNIA ⚒️'
         };
 
-        this.add.text(width / 2, height / 2 - 300, shopNames[this.shopkeeper] || '🛒 SKLEP 🛒', {
+        this.titleText = this.add.text(panelX, panelY - panelHeight / 2 + 36, shopNames[this.shopkeeper] || '🛒 SKLEP 🛒', {
             fontFamily: 'Arial',
-            fontSize: '42px',
+            fontSize: '38px',
             fontStyle: 'bold',
             color: '#f39c12'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setDepth(6);
 
         // Złoto gracza
-        this.goldText = this.add.text(width / 2 - 450, height / 2 - 240, `💰 Twoje złoto: ${GameState.currency}`, {
+        this.goldText = this.add.text(panelX - panelWidth / 2 + 50, panelY - panelHeight / 2 + 76, `💰 Twoje złoto: ${GameState.currency}`, {
             fontFamily: 'Arial',
             fontSize: '22px',
             fontStyle: 'bold',
             color: '#f1c40f'
-        });
+        }).setDepth(6);
 
         // Zakładki
         this.currentTab = 'buy';
-        this.createTabs(width / 2, height / 2 - 200);
+        // Przesuń zakładki niżej, aby nie nakładały się na złoto
+        this.createTabs(panelX, panelY - panelHeight / 2 + 152);
 
-        // Obszar przedmiotów
+        // Obszar przewijanych przedmiotów (z maską)
+        const maskX = panelX - panelWidth / 2 + 40;
+        const maskY = panelY - panelHeight / 2 + 200; // poniżej zakładek i złota
+        const maskWidth = panelWidth - 80;
+        const maskHeight = panelHeight - 220; // większy dolny margines
+        const maskG = this.make.graphics();
+        maskG.fillStyle(0xffffff, 1);
+        maskG.fillRect(maskX, maskY, maskWidth, maskHeight);
+        this.itemsMask = maskG.createGeometryMask();
+
         this.itemsContainer = this.add.container(0, 0);
+        this.itemsContainer.setMask(this.itemsMask);
+        this.itemsContainer.setDepth(4);
+        // Parametry scrolla
+        this.scrollArea = { x: maskX, y: maskY, width: maskWidth, height: maskHeight };
+        this.scrollY = 0;
+        this.maxScroll = 0;
         this.displayItems();
+        this.setupScrolling();
 
         // Informacje o zaznaczonym przedmiocie (dół)
         this.itemInfoText = this.add.text(width / 2, height / 2 + 250, '', {
@@ -71,17 +96,18 @@ export default class ShopScene extends Phaser.Scene {
         ];
 
         tabs.forEach((tab, index) => {
-            const tabX = x - 100 + index * 200;
+            const tabX = x - 120 + index * 240;
 
             const button = this.add.image(tabX, y, 'ui_button_small')
-                .setInteractive({ useHandCursor: true });
+                .setInteractive({ useHandCursor: true })
+                .setDepth(6);
 
             this.add.text(tabX, y, tab.label, {
                 fontFamily: 'Arial',
                 fontSize: '22px',
                 fontStyle: 'bold',
                 color: '#ffffff'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setDepth(6);
 
             button.on('pointerdown', () => {
                 this.currentTab = tab.key;
@@ -102,12 +128,13 @@ export default class ShopScene extends Phaser.Scene {
             );
         }
 
-        const { width, height } = this.cameras.main;
-        const startY = height / 2 - 130;
-        const cols = 3;
+        // Pierwszy wiersz 70px poniżej maski – estetyczny odstęp
+        const startY = this.scrollArea.y + 70;
+        // 2 kolumny wewnątrz panelu 800px
+        const cols = 2;
 
         if (items.length === 0) {
-            const emptyText = this.add.text(width / 2, height / 2,
+            const emptyText = this.add.text(this.panelX, this.scrollArea.y + this.scrollArea.height / 2,
                 this.currentTab === 'buy' ? 'Brak przedmiotów w sprzedaży' : 'Nie masz przedmiotów do sprzedania', {
                 fontFamily: 'Arial',
                 fontSize: '24px',
@@ -115,17 +142,27 @@ export default class ShopScene extends Phaser.Scene {
                 align: 'center'
             }).setOrigin(0.5);
             this.itemsContainer.add(emptyText);
+            this.maxScroll = 0;
             return;
         }
 
         items.forEach((item, index) => {
             const row = Math.floor(index / cols);
             const col = index % cols;
-            const itemX = width / 2 - 300 + col * 300;
+            // Środki kolumn rozmieszczone równo wewnątrz panelu (800px)
+            const colCenters = [this.panelX - 200, this.panelX + 200];
+            const itemX = colCenters[col];
             const itemY = startY + row * 140;
 
             this.createItemCard(itemX, itemY, item);
         });
+
+        // Oblicz maksymalny scroll
+        const totalRows = Math.ceil(items.length / cols);
+        const totalHeight = totalRows * 140;
+        const visibleHeight = this.scrollArea.height;
+        this.maxScroll = Math.max(0, totalHeight - visibleHeight);
+        this.updateScroll();
     }
 
     getShopItems() {
@@ -186,10 +223,11 @@ export default class ShopScene extends Phaser.Scene {
         // Przycisk akcji
         const btnText = this.currentTab === 'buy' ? 'KUP' : 'SPRZEDAJ';
 
-        const actionBtn = this.add.image(x + 90, y, 'ui_button_small')
+        const actionBtn = this.add.image(x + 30, y, 'ui_button_small')
+            .setScale(0.8)
             .setInteractive({ useHandCursor: true });
 
-        const btnLabel = this.add.text(x + 90, y, btnText, {
+        const btnLabel = this.add.text(x + 30, y, btnText, {
             fontFamily: 'Arial',
             fontSize: '14px',
             fontStyle: 'bold',
@@ -356,6 +394,39 @@ export default class ShopScene extends Phaser.Scene {
         });
 
         return button;
+    }
+
+    setupScrolling() {
+        // Scroll kółkiem
+        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+            if (this.maxScroll > 0) {
+                this.scrollY += deltaY * 0.3;
+                this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
+                this.updateScroll();
+            }
+        });
+
+        // Strzałki góra/dół
+        const upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+        const downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+
+        upKey.on('down', () => {
+            if (this.maxScroll > 0) {
+                this.scrollY = Math.max(0, this.scrollY - 30);
+                this.updateScroll();
+            }
+        });
+
+        downKey.on('down', () => {
+            if (this.maxScroll > 0) {
+                this.scrollY = Math.min(this.maxScroll, this.scrollY + 30);
+                this.updateScroll();
+            }
+        });
+    }
+
+    updateScroll() {
+        this.itemsContainer.y = -this.scrollY;
     }
 
     close() {

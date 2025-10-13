@@ -199,7 +199,7 @@ legends-of-eldoria/
 
 ### ✅ W pełni zaimplementowane:
 
-- **Sistema postaci**: Pełne tworzenie z 4 rasami i 4 klasami
+- **System postaci**: Pełne tworzenie z 4 rasami i 4 klasami
 - **Rozgrywka**: Kompletny system walki z umiejętnościami
 - **Świat gry**: 8 różnorodnych lokacji z unikalnymi wrogami
 - **Progresja**: System poziomów, doświadczenia i questów
@@ -209,10 +209,10 @@ legends-of-eldoria/
 - **Mapa**: Interaktywna mapa świata z szybką podróżą
 - **Questy**: Dziennik questów z śledzeniem postępu
 - **Zapisywanie**: Automatyczne zapisywanie stanu gry
-- **Boss fights**: Epickie walki z potężnymi przeciwnikami
-- **Debug mode**: Tryb deweloperski z F10 do testów
-- **Loading screens**: Płynne przejścia między lokacjami
-- **NPC interactions**: Pełne interakcje ze starszym wioski i kupcami
+- **Walki z bossami**: Epickie walki z potężnymi przeciwnikami
+- **Tryb debugowania**: Tryb deweloperski z F10 do testów
+- **Ekrany ładowania**: Płynne przejścia między lokacjami
+- **Interakcje z NPC**: Pełne interakcje ze starszym wioski i kupcami
 
 ### 🔧 Szczegóły techniczne:
 
@@ -233,12 +233,12 @@ legends-of-eldoria/
 
 ### Klasy postaci: 4 różne style gry
 
-- **Wojownik**: Wytrzymały melee fighter
+- **Wojownik**: Wytrzymały wojownik walczący w zwarciu
 - **Mag**: Potężne zaklęcia dystansowe
-- **Łotrzyk**: Szybki i zwinny assassin
+- **Łotrzyk**: Szybki i zwinny skrytobójca
 - **Strażnik**: Wszechstronny łucznik
 
-### Sistema questów
+### System questów
 
 - Główne questy prowadzące fabułę
 - Zadania poboczne dla dodatkowej zawartości
@@ -257,8 +257,8 @@ legends-of-eldoria/
 
 ### Wersja 2.0 (Długoterminowa):
 
-- [ ] Multiplayer cooperativo
-- [ ] Rozbudowany crafting system
+- [ ] Tryb wieloosobowy kooperacyjny
+- [ ] Rozbudowany system tworzenia przedmiotów
 - [ ] Rozgałęziona fabuła z wyborami
 - [ ] Dodatkowe rasy i klasy
 - [ ] Większy świat z więcej lokacjami

@@ -130,18 +130,18 @@ LOCATION_ID: {
 }
 ```
 
-#### MapGenerator
+#### Generator map
 
 Różne algorytmy dla różnych typów map:
 
-- **Forest**: Losowe rozmieszczenie drzew (15%), woda (5%), trawa (80%)
+- **Las**: Losowe rozmieszczenie drzew (15%), woda (5%), trawa (80%)
 - **Dungeon**: Generator pokoi z korytarzami (8 pokoi)
-- **Cave**: Cellular automata dla organicznych kształtów (5 iteracji)
-- **Village**: Predefiniowane układy budynków i NPC
-- **Mountain**: Wysokościowe generowanie ze szczytami
-- **Lake**: Centralne jezioro z wybrzeżami
-- **Cemetery**: Siatka grobów z ścieżkami
-- **Temple**: Symetryczne układy świętych sal
+- **Jaskinia**: Cellular automata dla organicznych kształtów (5 iteracji)
+- **Wioska**: Predefiniowane układy budynków i NPC
+- **Góra**: Wysokościowe generowanie ze szczytami
+- **Jezioro**: Centralne jezioro z wybrzeżami
+- **Cmentarz**: Siatka grobów z ścieżkami
+- **Świątynia**: Symetryczne układy świętych sal
 
 ### ⚔️ System walki
 
@@ -217,7 +217,7 @@ QUEST_ID: {
 }
 ```
 
-#### Quest triggers w GameScene
+#### Wyzwalacze questów w GameScene
 
 Automatyczne aktualizacje postępu:
 
@@ -257,7 +257,7 @@ this.input.on("wheel", (pointer, gameObjects, deltaX, deltaY) => {
 });
 ```
 
-#### Layout 2-kolumnowy
+#### Układ 2-kolumnowy
 
 ```javascript
 // Automatyczne układanie w kolumnach
@@ -293,7 +293,7 @@ this.tweens.add({
 });
 ```
 
-#### Loading screens
+#### Ekrany ładowania
 
 ```javascript
 showLoadingScreen() {
@@ -313,7 +313,7 @@ showLoadingScreen() {
 }
 ```
 
-### 🔧 Debug System
+### 🔧 System debugowania
 
 #### Aktywacja (F10 w GameScene)
 
@@ -321,13 +321,13 @@ showLoadingScreen() {
 setupDebugMode() {
     this.input.keyboard.on('keydown-F10', () => {
         GameState.enableDebugMode();
-        this.showMessage('DEBUG: stats, gold, mapy odblokowane',
+        this.showMessage('DEBUG: statystyki, złoto, mapy odblokowane',
                         this.player.x, this.player.y - 60, '#f39c12');
     });
 }
 ```
 
-#### Funkcje debug mode
+#### Funkcje trybu debugowania
 
 ```javascript
 enableDebugMode() {
@@ -445,7 +445,7 @@ NEW_QUEST: {
 }
 ```
 
-2. **Trigger w odpowiednim miejscu**:
+2. **Wyzwalacz w odpowiednim miejscu**:
 
 ```javascript
 // Przykład - automatyczne nadanie po ukończeniu innego questu
@@ -470,12 +470,12 @@ if (questId === "prerequisite_quest") {
 }
 ```
 
-2. **Handling w GameScene.useSkill()**:
+2. **Obsługa w GameScene.useSkill()**:
 
 ```javascript
 // Dodaj specjalną logikę jeśli potrzebna
 if (skill.name === "Nowa Umiejętność") {
-  // Custom behavior
+  // Zachowanie niestandardowe
   this.createSpecialEffect(this.player.x, this.player.y);
 }
 ```
@@ -505,7 +505,7 @@ if (skill.name === "Nowa Umiejętność") {
 this.createItemSprite("item_new_item", color, iconChar);
 ```
 
-## 🧪 Testowanie i debugging
+## 🧪 Testowanie i debugowanie
 
 ### Komendy konsoli deweloperskiej
 
@@ -529,7 +529,7 @@ GameState.enableDebugMode();
 GameState.resetGame();
 ```
 
-### Performance monitoring
+### Monitorowanie wydajności
 
 ```javascript
 // W GameScene.update() - monitoring FPS
@@ -538,10 +538,10 @@ if (this.debugMode) {
 }
 ```
 
-### Memory leak prevention
+### Zapobieganie wyciekom pamięci
 
 ```javascript
-// Cleanup w scene transitions
+// Czyszczenie przy przejściach między scenami
 scene.events.on("shutdown", () => {
   // Zniszcz timery
   if (this.someTimer) this.someTimer.destroy();
@@ -556,7 +556,7 @@ scene.events.on("shutdown", () => {
 
 ## 📊 Optymalizacja
 
-### Object pooling dla projektili
+### Pooling obiektów dla pocisków
 
 ```javascript
 // Pula obiektów dla częstych kreacji/destrukcji
@@ -575,7 +575,7 @@ returnProjectile(projectile) {
 }
 ```
 
-### Sprite atlas optimization
+### Optymalizacja atlasu sprite'ów
 
 ```javascript
 // W BootScene - użycie atlasów zamiast pojedynczych obrazów
@@ -585,10 +585,10 @@ this.load.multiatlas("game_atlas", "atlas/game.json", "atlas/");
 this.add.image(x, y, "game_atlas", "sprite_name");
 ```
 
-### Bounds checking optymalizacja
+### Optymalizacja sprawdzania granic
 
 ```javascript
-// Sprawdzaj kolizje tylko dla obiektów w viewporcie
+// Sprawdzaj kolizje tylko dla obiektów w widoku kamery
 const camera = this.cameras.main;
 const visibleEnemies = this.enemies.filter((enemy) =>
   Phaser.Geom.Rectangle.Overlaps(camera.worldView, enemy.getBounds())
@@ -597,4 +597,4 @@ const visibleEnemies = this.enemies.filter((enemy) =>
 
 ---
 
-**Happy coding! 🎮💻**
+**Miłego kodowania! 🎮💻**

@@ -5,10 +5,11 @@ class GameState {
         this.inventory = [];
         this.quests = [];
         this.completedQuests = [];
-        this.discoveredLocations = [];
+        this.discoveredLocations = ['STARTING_VILLAGE']; // Wioska początkowa zawsze odkryta
         this.defeatedEnemies = [];
         this.gameTime = 0;
         this.currency = 100;
+        this.currentLocation = 'STARTING_VILLAGE';
     }
 
     // Tworzenie postaci gracza
@@ -91,10 +92,18 @@ class GameState {
         // Pełne odnowienie zdrowia i many
         this.player.attributes.health = this.player.attributes.maxHealth;
         this.player.attributes.mana = this.player.attributes.maxMana;
+
+        // Zwróć true aby wskazać że był awans
+        this.justLeveledUp = true;
+        return true;
     }
 
     // Zarządzanie ekwipunkiem
     addItem(item) {
+        // Dodaj unikalne ID jeśli nie ma
+        if (!item.id) {
+            item.id = `item_${Date.now()}_${Math.random()}`;
+        }
         this.inventory.push(item);
     }
 
@@ -112,9 +121,24 @@ class GameState {
         }
     }
 
+    // Znajdź przedmiot w ekwipunku
+    findItem(itemId) {
+        return this.inventory.find(item => item.id === itemId);
+    }
+
     // Zarządzanie questami
     addQuest(quest) {
-        this.quests.push(quest);
+        // Dodaj kopię questu aby nie modyfikować oryginalnego
+        const questCopy = JSON.parse(JSON.stringify(quest));
+        this.quests.push(questCopy);
+    }
+
+    updateQuestProgress(questId, objectiveIndex, progress) {
+        const quest = this.quests.find(q => q.id === questId);
+        if (quest && quest.objectives && quest.objectives[objectiveIndex]) {
+            quest.objectives[objectiveIndex].current = progress;
+            this.saveGame();
+        }
     }
 
     completeQuest(questId) {
@@ -130,7 +154,22 @@ class GameState {
         }
     }
 
-    // Zapisywanie i wczytywanie gry
+    // Sprawdź postęp questów przy pokonaniu wroga
+    checkQuestProgress(enemyName) {
+        this.quests.forEach(quest => {
+            if (quest.objectives) {
+                quest.objectives.forEach((objective, index) => {
+                    if (objective.type === 'kill' && objective.target === enemyName) {
+                        objective.current = (objective.current || 0) + 1;
+                        if (objective.current > objective.count) {
+                            objective.current = objective.count;
+                        }
+                    }
+                });
+            }
+        });
+        this.saveGame();
+    }    // Zapisywanie i wczytywanie gry
     saveGame() {
         const saveData = {
             player: this.player,

@@ -1,0 +1,363 @@
+import Phaser from 'phaser';
+import GameState from '../GameState';
+import { LOCATIONS } from '../data/locations';
+
+export default class MapScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'MapScene' });
+    }
+
+    create() {
+        const { width, height } = this.cameras.main;
+
+        // Półprzezroczyste tło
+        this.add.rectangle(0, 0, width, height, 0x000000, 0.85)
+            .setOrigin(0)
+            .setScrollFactor(0);
+
+        // Panel mapy
+        const panelWidth = 1100;
+        const panelHeight = 650;
+        this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x1a1a2e)
+            .setStrokeStyle(4, 0xf39c12);
+
+        // Tytuł
+        this.add.text(width / 2, height / 2 - 305, '🗺️ MAPA ELDORII 🗺️', {
+            fontFamily: 'Arial',
+            fontSize: '42px',
+            fontStyle: 'bold',
+            color: '#f39c12'
+        }).setOrigin(0.5);
+
+        // Rysowanie mapy
+        this.drawMap(width / 2, height / 2);
+
+        // Legenda
+        this.createLegend(width / 2 - 480, height / 2 + 230);
+
+        // Informacje o lokacji
+        this.locationInfo = this.add.text(width / 2, height / 2 + 270, '', {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            color: '#ffffff',
+            align: 'center'
+        }).setOrigin(0.5);
+
+        // Statystyki odkryć
+        this.createDiscoveryStats(width / 2, height / 2 + 300);
+
+        // Przycisk zamknięcia
+        this.createButton(width / 2 + 480, height / 2 - 305, 'X', () => {
+            this.close();
+        }, 0xe74c3c, 50, 50);
+
+        // Klawisz M do zamknięcia
+        this.input.keyboard.once('keydown-M', () => {
+            this.close();
+        });
+    }
+
+    drawMap(centerX, centerY) {
+        // Definiujemy pozycje lokacji na mapie
+        const mapLocations = [
+            {
+                id: 'STARTING_VILLAGE',
+                x: centerX - 200,
+                y: centerY + 50,
+                icon: '🏘️',
+                name: 'Wioska Początkowa'
+            },
+            {
+                id: 'DARK_FOREST',
+                x: centerX - 50,
+                y: centerY - 80,
+                icon: '🌲',
+                name: 'Mroczny Las'
+            },
+            {
+                id: 'ABANDONED_RUINS',
+                x: centerX + 150,
+                y: centerY - 30,
+                icon: '🏛️',
+                name: 'Opuszczone Ruiny'
+            },
+            {
+                id: 'MOUNTAIN_CAVE',
+                x: centerX + 200,
+                y: centerY - 150,
+                icon: '⛰️',
+                name: 'Górska Jaskinia'
+            },
+            {
+                id: 'DRAGON_LAIR',
+                x: centerX + 350,
+                y: centerY - 100,
+                icon: '🐉',
+                name: 'Smocza Jama'
+            },
+            {
+                id: 'CRYSTAL_LAKE',
+                x: centerX - 300,
+                y: centerY - 50,
+                icon: '💎',
+                name: 'Kryształowe Jezioro'
+            },
+            {
+                id: 'HAUNTED_CEMETERY',
+                x: centerX + 50,
+                y: centerY + 100,
+                icon: '⚰️',
+                name: 'Nawiedzony Cmentarz'
+            },
+            {
+                id: 'ANCIENT_TEMPLE',
+                x: centerX - 150,
+                y: centerY - 180,
+                icon: '🛕',
+                name: 'Starożytna Świątynia'
+            }
+        ];
+
+        // Rysowanie ścieżek między lokacjami
+        this.drawPaths(mapLocations, centerX, centerY);
+
+        // Rysowanie lokacji
+        mapLocations.forEach(location => {
+            const isDiscovered = GameState.discoveredLocations.includes(location.id);
+            const isCurrentLocation = this.isCurrentLocation(location.id);
+
+            // Okrąg lokacji
+            const circle = this.add.circle(location.x, location.y, 35,
+                isCurrentLocation ? 0xf39c12 : (isDiscovered ? 0x27ae60 : 0x34495e))
+                .setStrokeStyle(3, isCurrentLocation ? 0xffffff : 0x7f8c8d);
+
+            if (isDiscovered || isCurrentLocation) {
+                circle.setInteractive({ useHandCursor: true });
+
+                // Ikona lokacji
+                const icon = this.add.text(location.x, location.y, location.icon, {
+                    fontFamily: 'Arial',
+                    fontSize: '28px'
+                }).setOrigin(0.5);
+
+                // Nazwa lokacji
+                const name = this.add.text(location.x, location.y + 50, location.name, {
+                    fontFamily: 'Arial',
+                    fontSize: '14px',
+                    fontStyle: 'bold',
+                    color: isCurrentLocation ? '#f39c12' : '#ffffff',
+                    align: 'center',
+                    wordWrap: { width: 100 }
+                }).setOrigin(0.5);
+
+                // Interakcje
+                circle.on('pointerover', () => {
+                    circle.setStrokeStyle(3, 0xf39c12);
+                    this.showLocationInfo(location.id);
+                });
+
+                circle.on('pointerout', () => {
+                    circle.setStrokeStyle(3, isCurrentLocation ? 0xffffff : 0x7f8c8d);
+                    this.locationInfo.setText('');
+                });
+
+                circle.on('pointerdown', () => {
+                    this.travelToLocation(location.id);
+                });
+            } else {
+                // Nieodkryta lokacja - znak zapytania
+                this.add.text(location.x, location.y, '?', {
+                    fontFamily: 'Arial',
+                    fontSize: '32px',
+                    fontStyle: 'bold',
+                    color: '#7f8c8d'
+                }).setOrigin(0.5);
+            }
+        });
+
+        // Znacznik gracza (pulsujący)
+        const playerMarker = this.add.text(centerX - 200, centerY + 50, '👤', {
+            fontFamily: 'Arial',
+            fontSize: '24px'
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+            targets: playerMarker,
+            scale: { from: 1, to: 1.3 },
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+    }
+
+    drawPaths(locations, centerX, centerY) {
+        const graphics = this.add.graphics();
+        graphics.lineStyle(2, 0x7f8c8d, 0.5);
+
+        // Ścieżki między lokacjami
+        const paths = [
+            [0, 1], // Wioska -> Las
+            [1, 2], // Las -> Ruiny
+            [2, 3], // Ruiny -> Jaskinia
+            [3, 4], // Jaskinia -> Smok
+            [0, 5], // Wioska -> Jezioro
+            [1, 7], // Las -> Świątynia
+            [0, 6], // Wioska -> Cmentarz
+            [6, 2]  // Cmentarz -> Ruiny
+        ];
+
+        paths.forEach(([from, to]) => {
+            if (locations[from] && locations[to]) {
+                const start = locations[from];
+                const end = locations[to];
+
+                graphics.beginPath();
+                graphics.moveTo(start.x, start.y);
+                graphics.lineTo(end.x, end.y);
+                graphics.strokePath();
+            }
+        });
+    }
+
+    isCurrentLocation(locationId) {
+        // Sprawdź czy gracz jest obecnie w tej lokacji
+        return GameState.currentLocation === locationId;
+    }
+
+    showLocationInfo(locationId) {
+        const location = LOCATIONS[locationId];
+        if (!location) return;
+
+        let info = `${location.name}\n${location.description}`;
+
+        if (location.enemies) {
+            info += `\n⚔️ Wrogowie: ${location.enemies.length}`;
+        }
+
+        if (location.boss) {
+            info += `\n💀 Boss obecny!`;
+        }
+
+        if (location.npcs) {
+            info += `\n👥 NPC: ${location.npcs.length}`;
+        }
+
+        this.locationInfo.setText(info);
+    }
+
+    travelToLocation(locationId) {
+        const location = LOCATIONS[locationId];
+        if (!location) return;
+
+        // Zapisz nową lokację
+        GameState.currentLocation = locationId;
+
+        if (!GameState.discoveredLocations.includes(locationId)) {
+            GameState.discoveredLocations.push(locationId);
+            this.showMessage(`Odkryto nową lokację: ${location.name}!`, 0x2ecc71);
+        }
+
+        GameState.saveGame();
+
+        // Możesz tutaj dodać logikę przejścia do nowej lokacji
+        this.showMessage(`Podróżujesz do: ${location.name}`, 0x3498db);
+    }
+
+    createLegend(x, y) {
+        const legend = [
+            { icon: '👤', label: 'Twoja pozycja', color: '#f39c12' },
+            { icon: '🟢', label: 'Odkryte lokacje', color: '#27ae60' },
+            { icon: '⚫', label: 'Nieodkryte', color: '#7f8c8d' }
+        ];
+
+        this.add.text(x, y - 20, 'LEGENDA:', {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            fontStyle: 'bold',
+            color: '#ffffff'
+        });
+
+        legend.forEach((item, index) => {
+            const itemY = y + index * 25 + 10;
+
+            this.add.text(x, itemY, item.icon, {
+                fontFamily: 'Arial',
+                fontSize: '16px'
+            });
+
+            this.add.text(x + 30, itemY, item.label, {
+                fontFamily: 'Arial',
+                fontSize: '14px',
+                color: item.color
+            });
+        });
+    }
+
+    createDiscoveryStats(x, y) {
+        const discovered = GameState.discoveredLocations.length;
+        const total = Object.keys(LOCATIONS).length + 3; // +3 dla dodatkowych lokacji
+
+        const stats = `Odkryto lokacji: ${discovered}/${total}`;
+
+        this.add.text(x, y, stats, {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            color: '#95a5a6',
+            align: 'center'
+        }).setOrigin(0.5);
+    }
+
+    showMessage(text, color) {
+        const { width } = this.cameras.main;
+        const message = this.add.text(width / 2, 100, text, {
+            fontFamily: 'Arial',
+            fontSize: '22px',
+            fontStyle: 'bold',
+            color: `#${color.toString(16).padStart(6, '0')}`,
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setOrigin(0.5).setScrollFactor(0);
+
+        this.tweens.add({
+            targets: message,
+            alpha: 0,
+            y: 50,
+            duration: 2500,
+            onComplete: () => message.destroy()
+        });
+    }
+
+    createButton(x, y, text, onClick, color = 0x3498db, w = 150, h = 40) {
+        const button = this.add.container(x, y);
+
+        const bg = this.add.rectangle(0, 0, w, h, color)
+            .setInteractive({ useHandCursor: true })
+            .setStrokeStyle(2, 0xffffff);
+
+        const label = this.add.text(0, 0, text, {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        button.add([bg, label]);
+
+        bg.on('pointerover', () => {
+            bg.setFillStyle(color + 0x222222);
+        });
+
+        bg.on('pointerout', () => {
+            bg.setFillStyle(color);
+        });
+
+        bg.on('pointerdown', onClick);
+
+        return button;
+    }
+
+    close() {
+        this.scene.resume('GameScene');
+        this.scene.stop();
+    }
+}

@@ -237,16 +237,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Instrukcje (prawy górny róg)
         const instructions = this.add.text(width - 10, 10,
-            'WASD - Ruch\nSPACJA - Atak\n1-4 - Umiejętności\nE - Zbierz\nESC - Menu', {
+            'WASD - Ruch\nSPACJA - Atak\n1-4 - Umiejętności\nE - Zbierz\nI - Ekwipunek\nQ - Questy\nM - Mapa\nESC - Menu', {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: '#ffffff',
             align: 'right'
         }).setOrigin(1, 0).setScrollFactor(0);
 
-        uiContainer.add(instructions);
-
-        this.updateUI();
+        uiContainer.add(instructions); this.updateUI();
     }
 
     setupControls() {
@@ -261,7 +259,10 @@ export default class GameScene extends Phaser.Scene {
             skill2: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
             skill3: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
             skill4: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
-            menu: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
+            menu: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
+            inventory: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.I),
+            quests: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
+            map: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M)
         };
 
         // Obsługa ataku
@@ -278,9 +279,16 @@ export default class GameScene extends Phaser.Scene {
 
         // Menu pauzy
         this.keys.menu.on('down', () => this.showPauseMenu());
-    }
 
-    setupCollisions() {
+        // Ekwipunek
+        this.keys.inventory.on('down', () => this.showInventory());
+
+        // Questy
+        this.keys.quests.on('down', () => this.showQuests());
+
+        // Mapa
+        this.keys.map.on('down', () => this.showMap());
+    } setupCollisions() {
         // Kolizje gracza z przedmiotami
         this.items.forEach(item => {
             this.physics.add.overlap(this.player, item, () => {
@@ -291,6 +299,25 @@ export default class GameScene extends Phaser.Scene {
 
     update() {
         if (!this.player) return;
+
+        // Sprawdź czy był awans poziomu
+        if (GameState.justLeveledUp) {
+            GameState.justLeveledUp = false;
+            this.scene.pause();
+            this.scene.launch('LevelUpScene', { level: GameState.player.level });
+        }
+
+        // Regeneracja many (1 punkt co 2 sekundy)
+        if (!this.lastManaRegen || Date.now() - this.lastManaRegen > 2000) {
+            if (GameState.player.attributes.mana < GameState.player.attributes.maxMana) {
+                GameState.player.attributes.mana = Math.min(
+                    GameState.player.attributes.mana + 1,
+                    GameState.player.attributes.maxMana
+                );
+                this.updateUI();
+            }
+            this.lastManaRegen = Date.now();
+        }
 
         // Poruszanie gracza
         const speed = 200;
@@ -329,9 +356,7 @@ export default class GameScene extends Phaser.Scene {
             GameState.saveGame();
             this.lastSave = Date.now();
         }
-    }
-
-    performAttack() {
+    } performAttack() {
         const attackRange = 50;
         const damage = 20 + GameState.player.attributes.strength * 2;
 
@@ -425,6 +450,14 @@ export default class GameScene extends Phaser.Scene {
         GameState.addExperience(enemy.enemyData.exp);
         this.showMessage(`+${enemy.enemyData.exp} EXP`, enemy.x, enemy.y, '#f39c12');
 
+        // Aktualizuj postęp questów
+        GameState.checkQuestProgress(enemy.enemyData.name);
+
+        // Losowy drop przedmiotów (30% szansa)
+        if (Math.random() < 0.3) {
+            this.dropItem(enemy.x, enemy.y);
+        }
+
         // Usuń wroga
         const index = this.enemies.indexOf(enemy);
         if (index > -1) {
@@ -439,7 +472,24 @@ export default class GameScene extends Phaser.Scene {
         this.updateUI();
     }
 
-    collectItem(item) {
+    dropItem(x, y) {
+        const dropTable = [
+            { key: 'item_potion', type: 'potion', effect: 'heal', value: 50, name: 'Mikstura zdrowia', price: 25 },
+            { key: 'item_gold', type: 'gold', value: 25, name: 'Złoto', price: 25 },
+            { key: 'item_gold', type: 'gold', value: 50, name: 'Złoto', price: 50 }
+        ];
+
+        const drop = Phaser.Utils.Array.GetRandom(dropTable);
+        const droppedItem = this.physics.add.sprite(x, y, drop.key);
+        droppedItem.itemData = { ...drop, id: `drop_${Date.now()}` };
+
+        this.items.push(droppedItem);
+
+        // Dodaj kolizję
+        this.physics.add.overlap(this.player, droppedItem, () => {
+            this.collectItem(droppedItem);
+        });
+    } collectItem(item) {
         const itemData = item.itemData;
 
         if (itemData.type === 'potion') {
@@ -569,5 +619,20 @@ export default class GameScene extends Phaser.Scene {
     showPauseMenu() {
         this.scene.pause();
         this.scene.launch('PauseMenuScene');
+    }
+
+    showInventory() {
+        this.scene.pause();
+        this.scene.launch('InventoryScene');
+    }
+
+    showQuests() {
+        this.scene.pause();
+        this.scene.launch('QuestScene');
+    }
+
+    showMap() {
+        this.scene.pause();
+        this.scene.launch('MapScene');
     }
 }

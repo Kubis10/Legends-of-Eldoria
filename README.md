@@ -67,15 +67,15 @@
 ### Akcje
 
 - **SPACJA** - Atak podstawowy
-- **1-4** - Użycie umiejętności specjalnych
+- **1-4** - Użycie umiejętności specjalnych (kosztują manę)
 - **E** - Interakcja/zbieranie przedmiotów
 
 ### Menu
 
-- **I** - Ekwipunek (w przyszłych wersjach)
-- **Q** - Lista questów (w przyszłych wersjach)
-- **M** - Mapa (w przyszłych wersjach)
-- **ESC** - Menu pauzy
+- **I** - Ekwipunek (zarządzanie przedmiotami, ekwipowanie, używanie mikstur)
+- **Q** - Lista questów (aktywne, ukończone, dostępne)
+- **M** - Mapa świata (odkrywanie lokacji, szybka podróż)
+- **ESC** - Menu pauzy (zapisz grę, wyjdź)
 
 ## 🚀 Uruchomienie gry
 
@@ -134,7 +134,12 @@ legends-of-eldoria/
 │   │   │   ├── MainMenuScene.js      # Menu główne
 │   │   │   ├── CharacterCreationScene.js  # Tworzenie postaci
 │   │   │   ├── GameScene.js          # Główna scena gry
-│   │   │   └── PauseMenuScene.js     # Menu pauzy
+│   │   │   ├── PauseMenuScene.js     # Menu pauzy
+│   │   │   ├── InventoryScene.js     # System ekwipunku
+│   │   │   ├── QuestScene.js         # Dziennik questów
+│   │   │   ├── MapScene.js           # Mapa świata
+│   │   │   ├── ShopScene.js          # Sklep i handel
+│   │   │   └── LevelUpScene.js       # Ekran awansu poziomu
 │   │   └── data/
 │   │       ├── content.js            # Questy, dialogi, przedmioty
 │   │       └── locations.js          # Lokacje i generator map

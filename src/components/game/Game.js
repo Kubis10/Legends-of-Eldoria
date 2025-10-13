@@ -5,6 +5,11 @@ import MainMenuScene from '../../game/scenes/MainMenuScene';
 import CharacterCreationScene from '../../game/scenes/CharacterCreationScene';
 import GameScene from '../../game/scenes/GameScene';
 import PauseMenuScene from '../../game/scenes/PauseMenuScene';
+import InventoryScene from '../../game/scenes/InventoryScene';
+import QuestScene from '../../game/scenes/QuestScene';
+import MapScene from '../../game/scenes/MapScene';
+import ShopScene from '../../game/scenes/ShopScene';
+import LevelUpScene from '../../game/scenes/LevelUpScene';
 
 class Game extends Component {
     componentDidMount() {
@@ -39,7 +44,12 @@ class Game extends Component {
                 MainMenuScene,
                 CharacterCreationScene,
                 GameScene,
-                PauseMenuScene
+                PauseMenuScene,
+                InventoryScene,
+                QuestScene,
+                MapScene,
+                ShopScene,
+                LevelUpScene
             ],
             backgroundColor: '#000000'
         };

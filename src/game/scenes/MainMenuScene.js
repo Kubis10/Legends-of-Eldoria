@@ -60,7 +60,7 @@ export default class MainMenuScene extends Phaser.Scene {
         }
 
         // Stopka
-        this.add.text(width / 2, height - 30, 'Stworzone z użyciem Phaser 3 i React', {
+        this.add.text(width / 2, height - 30, 'Stworzone przez Jakub Przybysz', {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#7f8c8d'
@@ -121,12 +121,19 @@ export default class MainMenuScene extends Phaser.Scene {
             .setOrigin(0)
             .setInteractive();
 
-        const panel = this.add.rectangle(width / 2, height / 2, 700, 500, 0x2c3e50)
-            .setStrokeStyle(3, 0xffffff);
+        const panelHeight = 600;
+        const panel = this.add.rectangle(width / 2, height / 2, 800, panelHeight, 0x2c3e50)
+            .setStrokeStyle(4, 0xf39c12);
 
-        const instructions = `INSTRUKCJE GRY
+        // Tytuł
+        const title = this.add.text(width / 2, height / 2 - panelHeight / 2 + 50, 'INSTRUKCJE GRY', {
+            fontFamily: 'Arial',
+            fontSize: '36px',
+            fontStyle: 'bold',
+            color: '#f39c12'
+        }).setOrigin(0.5);
 
-PORUSZANIE:
+        const instructions = `PORUSZANIE:
 Użyj klawiszy WASD lub strzałek do poruszania się
 
 WALKA:
@@ -144,35 +151,41 @@ CEL GRY:
 Odkryj tajemnice Eldorii, pokonaj bossów
 i ukończ główną fabułę oraz zadania poboczne!`;
 
-        const text = this.add.text(width / 2, height / 2 - 20, instructions, {
+        const text = this.add.text(width / 2, height / 2 + 10, instructions, {
             fontFamily: 'Arial',
-            fontSize: '18px',
+            fontSize: '17px',
             color: '#ffffff',
             align: 'center',
-            lineSpacing: 10
+            lineSpacing: 6
         }).setOrigin(0.5);
 
-        const closeButton = this.add.text(width / 2, height / 2 + 200, 'Zamknij', {
+        // Przycisk zamknij na dole panelu
+        const closeButton = this.add.rectangle(width / 2, height / 2 + panelHeight / 2 - 40, 200, 50, 0x27ae60)
+            .setInteractive({ useHandCursor: true })
+            .setStrokeStyle(3, 0xffffff);
+
+        const closeText = this.add.text(width / 2, height / 2 + panelHeight / 2 - 40, 'Zamknij', {
             fontFamily: 'Arial',
             fontSize: '24px',
-            color: '#3498db',
+            color: '#ffffff',
             fontStyle: 'bold'
-        }).setOrigin(0.5)
-            .setInteractive({ useHandCursor: true });
+        }).setOrigin(0.5);
 
         closeButton.on('pointerover', () => {
-            closeButton.setColor('#5dade2');
+            closeButton.setFillStyle(0x2ecc71);
         });
 
         closeButton.on('pointerout', () => {
-            closeButton.setColor('#3498db');
+            closeButton.setFillStyle(0x27ae60);
         });
 
         closeButton.on('pointerdown', () => {
             overlay.destroy();
             panel.destroy();
+            title.destroy();
             text.destroy();
             closeButton.destroy();
+            closeText.destroy();
         });
     }
 }

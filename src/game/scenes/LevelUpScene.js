@@ -19,8 +19,7 @@ export default class LevelUpScene extends Phaser.Scene {
             .setScrollFactor(0);
 
         // Panel
-        this.add.rectangle(width / 2, height / 2, 600, 500, 0x2c3e50)
-            .setStrokeStyle(4, 0xf39c12);
+        this.add.image(width / 2, height / 2, 'ui_panel_medium');
 
         // Tytuł z animacją
         const title = this.add.text(width / 2, height / 2 - 200, '⭐ AWANS POZIOMU! ⭐', {
@@ -130,9 +129,8 @@ export default class LevelUpScene extends Phaser.Scene {
     createButton(x, y, text, onClick, color = 0x27ae60) {
         const button = this.add.container(x, y).setScale(0);
 
-        const bg = this.add.rectangle(0, 0, 250, 60, color)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(4, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_large')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -144,7 +142,7 @@ export default class LevelUpScene extends Phaser.Scene {
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x222222);
+            bg.setTint(0xf7c66a);
             this.tweens.add({
                 targets: button,
                 scale: 1.1,
@@ -153,7 +151,7 @@ export default class LevelUpScene extends Phaser.Scene {
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.clearTint();
             this.tweens.add({
                 targets: button,
                 scale: 1,

@@ -161,9 +161,9 @@ export default class GameScene extends Phaser.Scene {
 
     createItems() {
         const itemTypes = [
-            { key: 'item_potion', type: 'potion', value: 50, name: 'Mikstura zdrowia' },
-            { key: 'item_gold', type: 'gold', value: 50, name: 'Złoto' },
-            { key: 'item_chest', type: 'chest', value: 100, name: 'Skrzynia' }
+            { key: 'icon_potion_red', type: 'potion', value: 50, name: 'Mikstura zdrowia' },
+            { key: 'icon_gold', type: 'gold', value: 50, name: 'Złoto' },
+            { key: 'icon_chest', type: 'chest', value: 100, name: 'Skrzynia' }
         ];
 
         // Tworzenie przedmiotów
@@ -186,8 +186,8 @@ export default class GameScene extends Phaser.Scene {
         const uiContainer = this.add.container(0, 0).setScrollFactor(0);
 
         // Panel gracza (lewy górny róg)
-        const playerPanel = this.add.rectangle(10, 10, 250, 120, 0x2c3e50, 0.9)
-            .setOrigin(0);
+        const playerPanel = this.add.image(10 + 125, 10 + 60, 'ui_panel_small')
+            .setOrigin(0.5);
 
         const playerName = this.add.text(20, 20, GameState.player.name, {
             fontFamily: 'Arial',
@@ -203,12 +203,12 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Paski zdrowia i many
-        this.uiElements.healthBarBg = this.add.rectangle(20, 75, 220, 15, 0x7f8c8d)
+        this.uiElements.healthBarBg = this.add.rectangle(20, 75, 220, 15, 0x8b6914)
             .setOrigin(0);
         this.uiElements.healthBar = this.add.rectangle(20, 75, 220, 15, 0xe74c3c)
             .setOrigin(0);
 
-        this.uiElements.manaBarBg = this.add.rectangle(20, 95, 220, 15, 0x7f8c8d)
+        this.uiElements.manaBarBg = this.add.rectangle(20, 95, 220, 15, 0x8b6914)
             .setOrigin(0);
         this.uiElements.manaBar = this.add.rectangle(20, 95, 220, 15, 0x3498db)
             .setOrigin(0);
@@ -233,8 +233,8 @@ export default class GameScene extends Phaser.Scene {
 
         // Panel umiejętności (dolny środek)
         const skillsY = height - 80;
-        const skillsPanel = this.add.rectangle(width / 2 - 250, skillsY, 500, 70, 0x2c3e50, 0.9)
-            .setOrigin(0)
+        const skillsPanel = this.add.image(width / 2, skillsY + 35, 'ui_panel_skillbar')
+            .setOrigin(0.5)
             .setScrollFactor(0);
 
         uiContainer.add(skillsPanel);
@@ -242,8 +242,8 @@ export default class GameScene extends Phaser.Scene {
         // Wyświetlanie umiejętności
         GameState.player.skills.forEach((skill, index) => {
             const skillX = width / 2 - 220 + index * 120;
-            const skillButton = this.add.rectangle(skillX, skillsY + 10, 100, 50, 0x34495e)
-                .setOrigin(0)
+            const skillButton = this.add.image(skillX + 50, skillsY + 35, 'ui_slot_wide')
+                .setOrigin(0.5)
                 .setScrollFactor(0);
 
             const skillText = this.add.text(skillX + 50, skillsY + 35, `${index + 1}\n${skill.name}`, {
@@ -504,9 +504,9 @@ export default class GameScene extends Phaser.Scene {
 
     dropItem(x, y) {
         const dropTable = [
-            { key: 'item_potion', type: 'potion', effect: 'heal', value: 50, name: 'Mikstura zdrowia', price: 25 },
-            { key: 'item_gold', type: 'gold', value: 25, name: 'Złoto', price: 25 },
-            { key: 'item_gold', type: 'gold', value: 50, name: 'Złoto', price: 50 }
+            { key: 'icon_potion_red', type: 'potion', effect: 'heal', value: 50, name: 'Mikstura zdrowia', price: 25 },
+            { key: 'icon_gold', type: 'gold', value: 25, name: 'Złoto', price: 25 },
+            { key: 'icon_gold', type: 'gold', value: 50, name: 'Złoto', price: 50 }
         ];
 
         const drop = Phaser.Utils.Array.GetRandom(dropTable);

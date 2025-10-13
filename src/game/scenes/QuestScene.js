@@ -19,11 +19,12 @@ export default class QuestScene extends Phaser.Scene {
         const panelWidth = 1000;
         const panelHeight = 600;
         const panelY = height / 2 + 10;
-        this.add.rectangle(width / 2, panelY, panelWidth, panelHeight, 0x2c3e50)
-            .setStrokeStyle(4, 0xf39c12);
+        const panelX = width / 2;
+        this.add.image(panelX, panelY, 'ui_panel_large');
 
         // Tytuł (wewnątrz panelu)
-        this.add.text(width / 2, panelY - panelHeight / 2 + 35, '📜 DZIENNIK QUESTÓW 📜', {
+        const titleTop = panelY - panelHeight / 2 + 35;
+        this.add.text(panelX, titleTop, '📜 DZIENNIK QUESTÓW 📜', {
             fontFamily: 'Arial',
             fontSize: '36px',
             fontStyle: 'bold',
@@ -32,15 +33,15 @@ export default class QuestScene extends Phaser.Scene {
 
         // Zakładki
         this.currentTab = 'active';
-        this.createTabs(width / 2, panelY - panelHeight / 2 + 85);
+        this.createTabs(panelX, titleTop + 50);
 
         // Obszar questów z możliwością przewijania
         this.scrollY = 0;
         this.questsContainer = this.add.container(0, 0);
 
         // Maska dla obszaru questów (tylko to co jest w strefie jest widoczne)
-        const maskX = width / 2 - 450;
-        const maskY = panelY - panelHeight / 2 + 135;
+        const maskX = panelX - 450;
+        const maskY = panelY - panelHeight / 2 + 140;
         const maskWidth = 900;
         const maskHeight = 380; // Wysokość strefy przewijania
 
@@ -60,12 +61,10 @@ export default class QuestScene extends Phaser.Scene {
         this.setupScrolling();
 
         // Statystyki (dół)
-        this.createStats(width / 2, panelY + panelHeight / 2 - 30);
+        this.createStats(panelX, panelY + panelHeight / 2 - 30);
 
-        // Przycisk zamknięcia (w prawym górnym rogu panelu)
-        this.createButton(width / 2 + panelWidth / 2 - 40, panelY - panelHeight / 2 + 40, 'X', () => {
-            this.close();
-        }, 0xe74c3c, 50, 50);
+        // Przycisk zamknięcia (w prawym górnym rogu panelu, wewnątrz)
+        this.createCloseButton(panelX + panelWidth / 2 - 30, panelY - panelHeight / 2 + 30);
 
         // Klawisz Q do zamknięcia
         this.input.keyboard.once('keydown-Q', () => {
@@ -85,12 +84,9 @@ export default class QuestScene extends Phaser.Scene {
 
         tabs.forEach((tab, index) => {
             const tabX = x - 200 + index * 200;
-            const isActive = this.currentTab === tab.key;
 
-            const button = this.add.rectangle(tabX, y, 180, 50,
-                isActive ? tab.color : 0x34495e)
-                .setInteractive({ useHandCursor: true })
-                .setStrokeStyle(2, isActive ? 0xffffff : 0x7f8c8d);
+            const button = this.add.image(tabX, y, 'ui_button_small')
+                .setInteractive({ useHandCursor: true });
 
             const label = this.add.text(tabX, y, tab.label, {
                 fontFamily: 'Arial',
@@ -107,15 +103,11 @@ export default class QuestScene extends Phaser.Scene {
             });
 
             button.on('pointerover', () => {
-                if (!isActive) {
-                    button.setFillStyle(tab.color - 0x111111);
-                }
+                button.setTint(0xf7c66a);
             });
 
             button.on('pointerout', () => {
-                if (!isActive) {
-                    button.setFillStyle(0x34495e);
-                }
+                button.clearTint();
             });
 
             this.tabButtons.push({ button, tab });
@@ -124,11 +116,14 @@ export default class QuestScene extends Phaser.Scene {
     }
 
     switchTab(newTab) {
-        // Aktualizuj wygląd przycisków
-        this.tabButtons.forEach(({ button, tab }) => {
+        // Aktualizuj wygląd przycisków (obrazy) i ewentualnie labeli
+        this.tabButtons.forEach(({ button, tab }, idx) => {
             const isActive = tab.key === newTab;
-            button.setFillStyle(isActive ? tab.color : 0x34495e);
-            button.setStrokeStyle(2, isActive ? 0xffffff : 0x7f8c8d);
+            if (isActive) {
+                button.setTint(0x70e1a8);
+            } else {
+                button.clearTint();
+            }
         });
 
         // Odśwież listę questów
@@ -149,10 +144,8 @@ export default class QuestScene extends Phaser.Scene {
         }
 
         const { width, height } = this.cameras.main;
-        const panelY = height / 2 + 10;
-        const panelHeight = 600;
         // Pierwszy quest powinien mieć środek 60px poniżej górnej krawędzi maski
-        const startY = panelY - panelHeight / 2 + 135 + 60;
+        const startY = (this.scrollArea?.y || 0) + 60;
 
         if (quests.length === 0) {
             const emptyText = this.add.text(width / 2, height / 2,
@@ -161,7 +154,7 @@ export default class QuestScene extends Phaser.Scene {
                         'Brak dostępnych questów', {
                 fontFamily: 'Arial',
                 fontSize: '24px',
-                color: '#7f8c8d',
+                color: '#d4af37',
                 align: 'center'
             }).setOrigin(0.5);
             this.questsContainer.add(emptyText);
@@ -184,17 +177,8 @@ export default class QuestScene extends Phaser.Scene {
     }
 
     createQuestCard(x, y, quest, index) {
-        // Określ kolor na podstawie typu questu
-        const typeColors = {
-            main: 0xf39c12,
-            side: 0x3498db,
-            boss: 0xe74c3c
-        };
-        const color = typeColors[quest.type] || 0x34495e;
-
         // Tło karty
-        const cardBg = this.add.rectangle(x, y, 900, 100, 0x34495e)
-            .setStrokeStyle(3, color);
+        const cardBg = this.add.image(x, y, 'ui_card_quest');
 
         // Ikonka typu
         const typeIcons = {
@@ -231,9 +215,8 @@ export default class QuestScene extends Phaser.Scene {
             const objective = quest.objectives[0]; // Pokazujemy pierwszy cel
             const progress = `${objective.current || 0}/${objective.count}`;
             // Sprawdź czy będzie przycisk po prawej (Przyjmij lub Odbierz)
-            const hasButton = this.currentTab === 'available' ||
-                (this.currentTab === 'active' && this.isQuestCompleted(quest));
-            const progressX = hasButton ? x + 240 : x + 300; // Lewo jeśli jest przycisk
+            const hasButton = this.currentTab === 'available' || (this.currentTab === 'active' && this.isQuestCompleted(quest));
+            const progressX = hasButton ? x + 150 : x + 300; // więcej miejsca dla przycisku
             const progressText = this.add.text(progressX, y - 20, progress, {
                 fontFamily: 'Arial',
                 fontSize: '20px',
@@ -242,14 +225,12 @@ export default class QuestScene extends Phaser.Scene {
             }).setOrigin(0.5);
 
             // Pasek postępu
-            const progressBarWidth = 150;
+            const progressBarWidth = 120;
             const progressPercent = (objective.current || 0) / objective.count;
 
-            const progressBarBg = this.add.rectangle(progressX, y + 15, progressBarWidth, 8, 0x7f8c8d)
-                .setOrigin(0.5);
+            const progressBarBg = this.add.rectangle(progressX, y + 15, progressBarWidth, 8, 0x8b6914).setOrigin(0.5);
             const progressBarFill = this.add.rectangle(progressX - progressBarWidth / 2, y + 15,
-                progressBarWidth * progressPercent, 8, 0x2ecc71)
-                .setOrigin(0, 0.5);
+                progressBarWidth * progressPercent, 8, 0x2ecc71).setOrigin(0, 0.5);
 
             cardElements.push(progressText, progressBarBg, progressBarFill);
         }
@@ -265,19 +246,19 @@ export default class QuestScene extends Phaser.Scene {
             `Nagrody: ${rewards.join(' | ')}`, {
             fontFamily: 'Arial',
             fontSize: '13px',
-            color: '#95a5a6'
+            color: '#d4af37'
         }).setOrigin(0, 0.5);
 
         cardElements.push(rewardText);
 
         // Przycisk akcji
         if (this.currentTab === 'available') {
-            const acceptBtn = this.createButton(x + 380, y, 'Przyjmij', () => {
+            const acceptBtn = this.createButton(x + 350, y, 'Przyjmij', () => {
                 this.acceptQuest(quest);
             }, 0x27ae60, 100, 40);
             cardElements.push(acceptBtn);
         } else if (this.currentTab === 'active' && this.isQuestCompleted(quest)) {
-            const completeBtn = this.createButton(x + 380, y, 'Odbierz', () => {
+            const completeBtn = this.createButton(x + 350, y, 'Odbierz', () => {
                 this.completeQuest(quest);
             }, 0x2ecc71, 100, 40);
             cardElements.push(completeBtn);
@@ -341,7 +322,7 @@ export default class QuestScene extends Phaser.Scene {
         this.add.text(x, y, stats, {
             fontFamily: 'Arial',
             fontSize: '16px',
-            color: '#95a5a6',
+            color: '#d4af37',
             align: 'center'
         }).setOrigin(0.5);
     }
@@ -402,9 +383,8 @@ export default class QuestScene extends Phaser.Scene {
     createButton(x, y, text, onClick, color = 0x3498db, w = 150, h = 40) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, w, h, color)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(2, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_small')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -416,14 +396,44 @@ export default class QuestScene extends Phaser.Scene {
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x222222);
+            bg.setTint(0xf7c66a);
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.clearTint();
         });
 
         bg.on('pointerdown', onClick);
+
+        return button;
+    }
+
+    createCloseButton(x, y) {
+        const button = this.add.container(x, y);
+
+        const bg = this.add.image(0, 0, 'ui_button_close')
+            .setInteractive({ useHandCursor: true });
+
+        const label = this.add.text(0, 0, '×', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        button.add([bg, label]);
+
+        bg.on('pointerover', () => {
+            bg.setTint(0xff6b6b);
+        });
+
+        bg.on('pointerout', () => {
+            bg.clearTint();
+        });
+
+        bg.on('pointerdown', () => {
+            this.close();
+        });
 
         return button;
     }

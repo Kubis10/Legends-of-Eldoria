@@ -14,19 +14,18 @@ export default class PauseMenuScene extends Phaser.Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
-        // Panel menu (mniejszy bez statystyk)
-        this.add.rectangle(width / 2, height / 2, 500, 350, 0x2c3e50)
-            .setStrokeStyle(4, 0xffffff);
+        // Panel menu (dedykowany panel dla pauzy)
+        this.add.image(width / 2, height / 2, 'ui_panel_pause');
 
         // Tytuł
-        this.add.text(width / 2, height / 2 - 130, 'PAUZA', {
+        this.add.text(width / 2, height / 2 - 100, 'PAUZA', {
             fontFamily: 'Arial',
-            fontSize: '48px',
+            fontSize: '42px',
             fontStyle: 'bold',
             color: '#f39c12'
         }).setOrigin(0.5);
 
-        // Przyciski (wycentrowane)
+        // Przyciski (dobrze rozłożone w większym panelu)
         this.createButton(width / 2, height / 2 - 30, 'Wznów grę', () => {
             this.resumeGame();
         }, 0x27ae60);
@@ -44,9 +43,8 @@ export default class PauseMenuScene extends Phaser.Scene {
     createButton(x, y, text, onClick, color = 0x3498db) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, 300, 50, color)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(3, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_large')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -58,7 +56,7 @@ export default class PauseMenuScene extends Phaser.Scene {
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x111111);
+            bg.setTint(0xf7c66a);
             this.tweens.add({
                 targets: button,
                 scale: 1.05,
@@ -67,7 +65,7 @@ export default class PauseMenuScene extends Phaser.Scene {
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.clearTint();
             this.tweens.add({
                 targets: button,
                 scale: 1,

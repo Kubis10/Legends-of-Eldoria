@@ -16,11 +16,9 @@ export default class InventoryScene extends Phaser.Scene {
             .setScrollFactor(0);
 
         // Panel ekwipunku (mniejszy i niżej)
-        const panelWidth = 900;
         const panelHeight = 560;
         const panelY = height / 2 + 20; // Przesunięty niżej
-        this.add.rectangle(width / 2, panelY, panelWidth, panelHeight, 0x2c3e50)
-            .setStrokeStyle(4, 0xf39c12);
+        this.add.image(width / 2, panelY, 'ui_panel_inventory');
 
         // Tytuł (wewnątrz panelu)
         this.add.text(width / 2, panelY - panelHeight / 2 + 35, '⚔️ EKWIPUNEK ⚔️', {
@@ -43,7 +41,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.itemInfoText = this.add.text(width / 2 - 250, panelY + panelHeight / 2 - 70, 'Najedź na przedmiot aby zobaczyć szczegóły\nKliknij aby użyć/założyć/zdjąć', {
             fontFamily: 'Arial',
             fontSize: '14px',
-            color: '#95a5a6',
+            color: '#d4af37',
             align: 'left',
             lineSpacing: 3
         }).setOrigin(0, 0.5);
@@ -56,10 +54,8 @@ export default class InventoryScene extends Phaser.Scene {
             color: '#f1c40f'
         }).setOrigin(0, 0.5);
 
-        // Przycisk zamknięcia (wewnątrz panelu, nie nachodzi na eq)
-        this.createButton(width / 2 + 320, panelY + panelHeight / 2 - 30, 'Zamknij (I)', () => {
-            this.close();
-        }, 0xe74c3c);
+        // Przycisk zamknięcia (kwadratowy w prawym górnym rogu)
+        this.createCloseButton(width / 2 + 420, panelY - panelHeight / 2 + 30);
 
         // Klawisz I do zamknięcia
         this.input.keyboard.once('keydown-I', () => {
@@ -123,12 +119,11 @@ export default class InventoryScene extends Phaser.Scene {
                 color: '#ecf0f1'
             }).setOrigin(0.5);
 
-            const slotBg = this.add.rectangle(x + 70, y + slot.y + 20, 130, 60, 0x34495e)
-                .setStrokeStyle(2, 0x7f8c8d);
+            const slotBg = this.add.image(x + 70, y + slot.y + 20, 'ui_equipped');
 
             const item = equipment[slot.type];
             if (item) {
-                const itemText = this.add.text(x + 70, y + slot.y + 20, item.name, {
+                this.add.text(x + 70, y + slot.y + 20, item.name, {
                     fontFamily: 'Arial',
                     fontSize: '13px',
                     color: '#2ecc71',
@@ -143,18 +138,18 @@ export default class InventoryScene extends Phaser.Scene {
 
                 slotBg.on('pointerover', () => {
                     this.showItemInfo(item);
-                    slotBg.setStrokeStyle(2, 0xf39c12);
+                    slotBg.setTint(0xf7c66a);
                 });
 
                 slotBg.on('pointerout', () => {
                     this.itemInfoText.setText('');
-                    slotBg.setStrokeStyle(2, 0x7f8c8d);
+                    slotBg.clearTint();
                 });
             } else {
                 this.add.text(x + 70, y + slot.y + 20, 'Pusty', {
                     fontFamily: 'Arial',
                     fontSize: '13px',
-                    color: '#7f8c8d'
+                    color: '#d4af37'
                 }).setOrigin(0.5);
             }
         });
@@ -182,32 +177,33 @@ export default class InventoryScene extends Phaser.Scene {
                 const cellX = x + col * (cellSize + padding);
                 const cellY = y + 40 + row * (cellSize + padding);
 
-                const cell = this.add.rectangle(cellX, cellY, cellSize, cellSize, 0x34495e)
-                    .setStrokeStyle(2, 0x7f8c8d)
+                const cell = this.add.image(cellX, cellY, 'ui_slot')
                     .setInteractive({ useHandCursor: true });
 
                 if (index < inventory.length) {
                     const item = inventory[index];
 
-                    // Ikona przedmiotu (kolorowy kwadrat)
-                    const iconColor = this.getItemColor(item.type);
-                    this.add.rectangle(cellX, cellY - 12, 38, 38, iconColor);
+                    // Ikona przedmiotu
+                    const iconKey = this.getItemIconKey(item.type);
+                    this.add.image(cellX, cellY - 12, iconKey).setDisplaySize(38, 38);
 
                     // Nazwa przedmiotu
-                    const nameText = this.add.text(cellX, cellY + 23, item.name, {
+                    this.add.text(cellX, cellY + 23, item.name, {
                         fontFamily: 'Arial',
                         fontSize: '10px',
                         color: '#ffffff',
                         align: 'center',
                         wordWrap: { width: 68 }
-                    }).setOrigin(0.5); cell.on('pointerover', () => {
+                    }).setOrigin(0.5);
+
+                    cell.on('pointerover', () => {
                         this.showItemInfo(item);
-                        cell.setStrokeStyle(2, 0xf39c12);
+                        cell.setTint(0xf7c66a);
                     });
 
                     cell.on('pointerout', () => {
                         this.itemInfoText.setText('');
-                        cell.setStrokeStyle(2, 0x7f8c8d);
+                        cell.clearTint();
                     });
 
                     cell.on('pointerdown', () => {
@@ -220,15 +216,17 @@ export default class InventoryScene extends Phaser.Scene {
         }
     }
 
-    getItemColor(type) {
-        const colors = {
-            weapon: 0xe74c3c,
-            armor: 0x3498db,
-            potion: 0x2ecc71,
-            accessory: 0x9b59b6,
-            quest: 0xf39c12
+    getItemIconKey(type) {
+        const icons = {
+            weapon: 'icon_weapon',
+            armor: 'icon_armor',
+            potion: 'icon_potion_red',
+            accessory: 'icon_accessory',
+            quest: 'icon_chest',
+            gold: 'icon_gold',
+            treasure: 'icon_chest'
         };
-        return colors[type] || 0x95a5a6;
+        return icons[type] || 'icon_chest';
     }
 
     showItemInfo(item) {
@@ -343,7 +341,7 @@ export default class InventoryScene extends Phaser.Scene {
         GameState.player.equipment[type] = null;
         GameState.saveGame();
 
-        this.showMessage(`Zdjęto: ${item.name}`, 0x95a5a6);
+        this.showMessage(`Zdjęto: ${item.name}`, 0xd4af37);
 
         // Odśwież scenę
         this.scene.restart();
@@ -394,9 +392,8 @@ export default class InventoryScene extends Phaser.Scene {
     createButton(x, y, text, onClick, color = 0x3498db) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, 160, 40, color)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(2, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_small')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -408,14 +405,44 @@ export default class InventoryScene extends Phaser.Scene {
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x222222);
+            bg.setTint(0xf7c66a);
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.clearTint();
         });
 
         bg.on('pointerdown', onClick);
+
+        return button;
+    }
+
+    createCloseButton(x, y) {
+        const button = this.add.container(x, y);
+
+        const bg = this.add.image(0, 0, 'ui_button_close')
+            .setInteractive({ useHandCursor: true });
+
+        const label = this.add.text(0, 0, '×', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        button.add([bg, label]);
+
+        bg.on('pointerover', () => {
+            bg.setTint(0xff6b6b);
+        });
+
+        bg.on('pointerout', () => {
+            bg.clearTint();
+        });
+
+        bg.on('pointerdown', () => {
+            this.close();
+        });
 
         return button;
     }

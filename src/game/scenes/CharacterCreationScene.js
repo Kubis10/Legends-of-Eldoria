@@ -56,8 +56,7 @@ export default class CharacterCreationScene extends Phaser.Scene {
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        const inputBg = this.add.rectangle(x, y + 50, 400, 50, 0x2c3e50)
-            .setStrokeStyle(2, 0xffffff);
+        const inputBg = this.add.image(x, y + 50, 'ui_button_large').setScale(400 / 300, 50 / 50);
 
         this.nameText = this.add.text(x, y + 50, '', {
             fontFamily: 'Arial',
@@ -76,7 +75,7 @@ export default class CharacterCreationScene extends Phaser.Scene {
         this.placeholder = this.add.text(x, y + 50, 'Wpisz imię...', {
             fontFamily: 'Arial',
             fontSize: '20px',
-            color: '#7f8c8d'
+            color: '#d4af37'
         }).setOrigin(0.5);
 
         this.inputActive = false;
@@ -204,8 +203,7 @@ export default class CharacterCreationScene extends Phaser.Scene {
     createSelectionButton(x, y, text, selected, onClick) {
         const container = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, 250, 50, selected ? 0x27ae60 : 0x34495e)
-            .setStrokeStyle(2, selected ? 0x2ecc71 : 0x7f8c8d)
+        const bg = this.add.image(0, 0, 'ui_button_small')
             .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
@@ -236,8 +234,7 @@ export default class CharacterCreationScene extends Phaser.Scene {
         bg.on('pointerdown', onClick);
 
         container.setSelected = (isSelected) => {
-            bg.setFillStyle(isSelected ? 0x27ae60 : 0x34495e);
-            bg.setStrokeStyle(2, isSelected ? 0x2ecc71 : 0x7f8c8d);
+            if (isSelected) bg.setTint(0x70e1a8); else bg.clearTint();
         };
 
         return container;
@@ -267,9 +264,8 @@ Inteligencja: ${totalIntelligence}`;
     createButton(x, y, text, onClick) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, 400, 60, 0x27ae60)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(3, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_large')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -278,10 +274,17 @@ Inteligencja: ${totalIntelligence}`;
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
+        // Dopasuj szerokość przycisku do długości tekstu (z zapasem)
+        const baseWidth = 300;
+        const padding = 60; // pikseli zapasu po bokach
+        const desiredWidth = Math.max(baseWidth, Math.ceil(label.width + padding));
+        const scaleX = desiredWidth / baseWidth;
+        bg.setScale(scaleX, 1);
+
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(0x2ecc71);
+            bg.setTint(0xf7c66a);
             this.tweens.add({
                 targets: button,
                 scale: 1.1,
@@ -290,7 +293,7 @@ Inteligencja: ${totalIntelligence}`;
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(0x27ae60);
+            bg.clearTint();
             this.tweens.add({
                 targets: button,
                 scale: 1,

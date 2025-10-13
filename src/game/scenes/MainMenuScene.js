@@ -10,7 +10,10 @@ export default class MainMenuScene extends Phaser.Scene {
         const { width, height } = this.cameras.main;
 
         // Tło
-        this.add.rectangle(0, 0, width, height, 0x1a1a2e).setOrigin(0);
+        this.add.rectangle(0, 0, width, height, 0x0f1722).setOrigin(0);
+        // centralny panel ozdobny
+        const panel = this.add.image(width / 2, height / 2, 'ui_panel_medium');
+        panel.setAlpha(0.95);
 
         // Tytuł gry
         const title = this.add.text(width / 2, height / 4, 'LEGENDS OF ELDORIA', {
@@ -32,7 +35,7 @@ export default class MainMenuScene extends Phaser.Scene {
         });
 
         // Przyciski menu
-        const buttonY = height / 2;
+        const buttonY = height / 2 - 40;
         const buttonSpacing = 70;
 
         const hasSave = GameState.hasSave();
@@ -63,16 +66,15 @@ export default class MainMenuScene extends Phaser.Scene {
         this.add.text(width / 2, height - 30, 'Stworzone przez Jakub Przybysz', {
             fontFamily: 'Arial',
             fontSize: '16px',
-            color: '#7f8c8d'
+            color: '#d4af37'
         }).setOrigin(0.5);
     }
 
     createButton(x, y, text, onClick, color = 0x3498db) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, 300, 50, color)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(3, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_large')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -84,7 +86,7 @@ export default class MainMenuScene extends Phaser.Scene {
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x111111);
+            bg.setTint(0xf7c66a);
             this.tweens.add({
                 targets: button,
                 scale: 1.1,
@@ -93,7 +95,7 @@ export default class MainMenuScene extends Phaser.Scene {
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.clearTint();
             this.tweens.add({
                 targets: button,
                 scale: 1,
@@ -122,8 +124,8 @@ export default class MainMenuScene extends Phaser.Scene {
             .setInteractive();
 
         const panelHeight = 600;
-        const panel = this.add.rectangle(width / 2, height / 2, 800, panelHeight, 0x2c3e50)
-            .setStrokeStyle(4, 0xf39c12);
+        const panel = this.add.rectangle(width / 2, height / 2, 800, panelHeight, 0x4a2c2a)
+            .setStrokeStyle(4, 0xd4af37);
 
         // Tytuł
         const title = this.add.text(width / 2, height / 2 - panelHeight / 2 + 50, 'INSTRUKCJE GRY', {
@@ -160,9 +162,8 @@ i ukończ główną fabułę oraz zadania poboczne!`;
         }).setOrigin(0.5);
 
         // Przycisk zamknij na dole panelu
-        const closeButton = this.add.rectangle(width / 2, height / 2 + panelHeight / 2 - 40, 200, 50, 0x27ae60)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(3, 0xffffff);
+        const closeButton = this.add.image(width / 2, height / 2 + panelHeight / 2 - 40, 'ui_button_small')
+            .setInteractive({ useHandCursor: true });
 
         const closeText = this.add.text(width / 2, height / 2 + panelHeight / 2 - 40, 'Zamknij', {
             fontFamily: 'Arial',
@@ -172,11 +173,11 @@ i ukończ główną fabułę oraz zadania poboczne!`;
         }).setOrigin(0.5);
 
         closeButton.on('pointerover', () => {
-            closeButton.setFillStyle(0x2ecc71);
+            closeButton.setTint(0xf7c66a);
         });
 
         closeButton.on('pointerout', () => {
-            closeButton.setFillStyle(0x27ae60);
+            closeButton.clearTint();
         });
 
         closeButton.on('pointerdown', () => {

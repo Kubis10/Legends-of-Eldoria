@@ -21,10 +21,7 @@ export default class ShopScene extends Phaser.Scene {
             .setScrollFactor(0);
 
         // Panel sklepu
-        const panelWidth = 1000;
-        const panelHeight = 640;
-        this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x2c3e50)
-            .setStrokeStyle(4, 0xf39c12);
+        this.add.image(width / 2, height / 2, 'ui_panel_medium');
 
         // Tytuł
         const shopNames = {
@@ -63,10 +60,8 @@ export default class ShopScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
-        // Przycisk zamknięcia
-        this.createButton(width / 2 + 380, height / 2 - 300, 'X', () => {
-            this.close();
-        }, 0xe74c3c, 50, 50);
+        // Przycisk zamknięcia (kwadratowy w prawym górnym rogu)
+        this.createCloseButton(width / 2 + 370, height / 2 - 270);
     }
 
     createTabs(x, y) {
@@ -77,14 +72,11 @@ export default class ShopScene extends Phaser.Scene {
 
         tabs.forEach((tab, index) => {
             const tabX = x - 100 + index * 200;
-            const isActive = this.currentTab === tab.key;
 
-            const button = this.add.rectangle(tabX, y, 180, 50,
-                isActive ? tab.color : 0x34495e)
-                .setInteractive({ useHandCursor: true })
-                .setStrokeStyle(2, isActive ? 0xffffff : 0x7f8c8d);
+            const button = this.add.image(tabX, y, 'ui_button_small')
+                .setInteractive({ useHandCursor: true });
 
-            const label = this.add.text(tabX, y, tab.label, {
+            this.add.text(tabX, y, tab.label, {
                 fontFamily: 'Arial',
                 fontSize: '22px',
                 fontStyle: 'bold',
@@ -94,18 +86,6 @@ export default class ShopScene extends Phaser.Scene {
             button.on('pointerdown', () => {
                 this.currentTab = tab.key;
                 this.displayItems();
-
-                // Aktualizuj przyciski
-                tabs.forEach((t, i) => {
-                    const tx = x - 100 + i * 200;
-                    const graphics = this.children.list.find(child =>
-                        child.x === tx && child.y === y && child.type === 'Rectangle'
-                    );
-                    if (graphics) {
-                        graphics.setFillStyle(t.key === this.currentTab ? t.color : 0x34495e);
-                        graphics.setStrokeStyle(2, t.key === this.currentTab ? 0xffffff : 0x7f8c8d);
-                    }
-                });
             });
         });
     }
@@ -131,7 +111,7 @@ export default class ShopScene extends Phaser.Scene {
                 this.currentTab === 'buy' ? 'Brak przedmiotów w sprzedaży' : 'Nie masz przedmiotów do sprzedania', {
                 fontFamily: 'Arial',
                 fontSize: '24px',
-                color: '#7f8c8d',
+                color: '#d4af37',
                 align: 'center'
             }).setOrigin(0.5);
             this.itemsContainer.add(emptyText);
@@ -162,22 +142,13 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     createItemCard(x, y, item) {
-        // Określ kolor na podstawie typu
-        const typeColors = {
-            weapon: 0xe74c3c,
-            armor: 0x3498db,
-            potion: 0x2ecc71,
-            accessory: 0x9b59b6
-        };
-        const color = typeColors[item.type] || 0x95a5a6;
-
         // Tło karty
-        const cardBg = this.add.rectangle(x, y, 280, 120, 0x34495e)
-            .setStrokeStyle(3, color)
+        const cardBg = this.add.image(x, y, 'ui_card_item')
             .setInteractive({ useHandCursor: true });
 
         // Ikona przedmiotu
-        const iconBg = this.add.rectangle(x - 100, y, 60, 60, color);
+        const iconKey = this.getItemIconKey(item.type);
+        const iconSprite = this.add.image(x - 100, y, iconKey).setDisplaySize(48, 48);
 
         // Nazwa przedmiotu
         const name = this.add.text(x - 60, y - 35, item.name, {
@@ -213,12 +184,10 @@ export default class ShopScene extends Phaser.Scene {
         }).setOrigin(0, 0.5);
 
         // Przycisk akcji
-        const btnColor = this.currentTab === 'buy' ? 0x27ae60 : 0xe67e22;
         const btnText = this.currentTab === 'buy' ? 'KUP' : 'SPRZEDAJ';
 
-        const actionBtn = this.add.rectangle(x + 90, y, 70, 40, btnColor)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(2, 0xffffff);
+        const actionBtn = this.add.image(x + 90, y, 'ui_button_small')
+            .setInteractive({ useHandCursor: true });
 
         const btnLabel = this.add.text(x + 90, y, btnText, {
             fontFamily: 'Arial',
@@ -228,12 +197,12 @@ export default class ShopScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         actionBtn.on('pointerover', () => {
-            actionBtn.setFillStyle(btnColor + 0x222222);
+            actionBtn.setTint(0xf7c66a);
             this.showItemDetails(item);
         });
 
         actionBtn.on('pointerout', () => {
-            actionBtn.setFillStyle(btnColor);
+            actionBtn.clearTint();
             this.itemInfoText.setText('');
         });
 
@@ -246,16 +215,28 @@ export default class ShopScene extends Phaser.Scene {
         });
 
         cardBg.on('pointerover', () => {
-            cardBg.setStrokeStyle(3, 0xf39c12);
+            cardBg.setTint(0xf7c66a);
             this.showItemDetails(item);
         });
 
         cardBg.on('pointerout', () => {
-            cardBg.setStrokeStyle(3, color);
+            cardBg.clearTint();
             this.itemInfoText.setText('');
         });
 
-        this.itemsContainer.add([cardBg, iconBg, name, price, actionBtn, btnLabel]);
+        this.itemsContainer.add([cardBg, iconSprite, name, price, actionBtn, btnLabel]);
+    }
+
+    getItemIconKey(type) {
+        const icons = {
+            weapon: 'icon_weapon',
+            armor: 'icon_armor',
+            potion: 'icon_potion_red',
+            accessory: 'icon_accessory',
+            gold: 'icon_gold',
+            treasure: 'icon_chest'
+        };
+        return icons[type] || 'icon_chest';
     }
 
     showItemDetails(item) {
@@ -322,9 +303,8 @@ export default class ShopScene extends Phaser.Scene {
     createButton(x, y, text, onClick, color = 0x3498db, w = 150, h = 40) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, w, h, color)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(2, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_small')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -336,14 +316,44 @@ export default class ShopScene extends Phaser.Scene {
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x222222);
+            bg.setTint(0xf7c66a);
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.clearTint();
         });
 
         bg.on('pointerdown', onClick);
+
+        return button;
+    }
+
+    createCloseButton(x, y) {
+        const button = this.add.container(x, y);
+
+        const bg = this.add.image(0, 0, 'ui_button_close')
+            .setInteractive({ useHandCursor: true });
+
+        const label = this.add.text(0, 0, '×', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        button.add([bg, label]);
+
+        bg.on('pointerover', () => {
+            bg.setTint(0xff6b6b);
+        });
+
+        bg.on('pointerout', () => {
+            bg.clearTint();
+        });
+
+        bg.on('pointerdown', () => {
+            this.close();
+        });
 
         return button;
     }

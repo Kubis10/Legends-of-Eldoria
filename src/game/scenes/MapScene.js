@@ -19,25 +19,25 @@ export default class MapScene extends Phaser.Scene {
         const panelWidth = 1100;
         const panelHeight = 620;
         const panelY = height / 2 + 10;
-        this.add.rectangle(width / 2, panelY, panelWidth, panelHeight, 0x1a1a2e)
-            .setStrokeStyle(4, 0xf39c12);
+        const panelX = width / 2;
+        this.add.image(panelX, panelY, 'ui_panel_map');
 
         // Tytuł (wewnątrz panelu)
-        this.add.text(width / 2, panelY - panelHeight / 2 + 35, '🗺️ MAPA ELDORII 🗺️', {
+        this.add.text(panelX, panelY - panelHeight / 2 + 35, '🗺️ MAPA ELDORII 🗺️', {
             fontFamily: 'Arial',
             fontSize: '36px',
             fontStyle: 'bold',
             color: '#f39c12'
         }).setOrigin(0.5);
 
-        // Rysowanie mapy
-        this.drawMap(width / 2, panelY - 20);
+        // Rysowanie mapy (przesunięta lekko w dół)
+        this.drawMap(panelX, panelY + 20);
 
         // Legenda (lewy dolny róg)
-        this.createLegend(width / 2 - 480, panelY + panelHeight / 2 - 100);
+        this.createLegend(panelX - panelWidth / 2 + 40, panelY + panelHeight / 2 - 140);
 
         // Informacje o lokacji (środek, wyżej)
-        this.locationInfo = this.add.text(width / 2, panelY + panelHeight / 2 - 110, '', {
+        this.locationInfo = this.add.text(panelX, panelY + panelHeight / 2 - 110, '', {
             fontFamily: 'Arial',
             fontSize: '15px',
             color: '#ffffff',
@@ -46,12 +46,10 @@ export default class MapScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Statystyki odkryć (prawy dolny róg, wyżej od krawędzi)
-        this.createDiscoveryStats(width / 2 + panelWidth / 2 - 20, panelY + panelHeight / 2 - 35);
+        this.createDiscoveryStats(panelX + panelWidth / 2 - 20, panelY + panelHeight / 2 - 35);
 
-        // Przycisk zamknięcia (w prawym górnym rogu panelu)
-        this.createButton(width / 2 + panelWidth / 2 - 40, panelY - panelHeight / 2 + 40, 'X', () => {
-            this.close();
-        }, 0xe74c3c, 50, 50);
+        // Przycisk zamknięcia (w prawym górnym rogu panelu, wewnątrz)
+        this.createCloseButton(panelX + panelWidth / 2 - 30, panelY - panelHeight / 2 + 30);
 
         // Klawisz M do zamknięcia
         this.input.keyboard.once('keydown-M', () => {
@@ -130,20 +128,20 @@ export default class MapScene extends Phaser.Scene {
 
             // Okrąg lokacji
             const circle = this.add.circle(location.x, location.y, 35,
-                isCurrentLocation ? 0xf39c12 : (isDiscovered ? 0x27ae60 : 0x34495e))
-                .setStrokeStyle(3, isCurrentLocation ? 0xffffff : 0x7f8c8d);
+                isCurrentLocation ? 0xf39c12 : (isDiscovered ? 0x27ae60 : 0x5d4037))
+                .setStrokeStyle(3, isCurrentLocation ? 0xffffff : 0xa0783b);
 
             if (isDiscovered || isCurrentLocation) {
                 circle.setInteractive({ useHandCursor: true });
 
                 // Ikona lokacji
-                const icon = this.add.text(location.x, location.y, location.icon, {
+                this.add.text(location.x, location.y, location.icon, {
                     fontFamily: 'Arial',
                     fontSize: '28px'
                 }).setOrigin(0.5);
 
                 // Nazwa lokacji
-                const name = this.add.text(location.x, location.y + 50, location.name, {
+                this.add.text(location.x, location.y + 50, location.name, {
                     fontFamily: 'Arial',
                     fontSize: '14px',
                     fontStyle: 'bold',
@@ -159,7 +157,7 @@ export default class MapScene extends Phaser.Scene {
                 });
 
                 circle.on('pointerout', () => {
-                    circle.setStrokeStyle(3, isCurrentLocation ? 0xffffff : 0x7f8c8d);
+                    circle.setStrokeStyle(3, isCurrentLocation ? 0xffffff : 0xa0783b);
                     this.locationInfo.setText('');
                 });
 
@@ -172,7 +170,7 @@ export default class MapScene extends Phaser.Scene {
                     fontFamily: 'Arial',
                     fontSize: '32px',
                     fontStyle: 'bold',
-                    color: '#7f8c8d'
+                    color: '#d4af37'
                 }).setOrigin(0.5);
             }
         });
@@ -194,7 +192,7 @@ export default class MapScene extends Phaser.Scene {
 
     drawPaths(locations, centerX, centerY) {
         const graphics = this.add.graphics();
-        graphics.lineStyle(2, 0x7f8c8d, 0.5);
+        graphics.lineStyle(2, 0xa0783b, 0.5);
 
         // Ścieżki między lokacjami
         const paths = [
@@ -269,7 +267,7 @@ export default class MapScene extends Phaser.Scene {
         const legend = [
             { icon: '👤', label: 'Twoja pozycja', color: '#f39c12' },
             { icon: '🟢', label: 'Odkryte lokacje', color: '#27ae60' },
-            { icon: '⚫', label: 'Nieodkryte', color: '#7f8c8d' }
+            { icon: '⚫', label: 'Nieodkryte', color: '#d4af37' }
         ];
 
         this.add.text(x, y - 20, 'LEGENDA:', {
@@ -304,7 +302,7 @@ export default class MapScene extends Phaser.Scene {
         this.add.text(x, y, stats, {
             fontFamily: 'Arial',
             fontSize: '15px',
-            color: '#95a5a6',
+            color: '#d4af37',
             align: 'right'
         }).setOrigin(1, 0.5);
     }
@@ -332,9 +330,8 @@ export default class MapScene extends Phaser.Scene {
     createButton(x, y, text, onClick, color = 0x3498db, w = 150, h = 40) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, w, h, color)
-            .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(2, 0xffffff);
+        const bg = this.add.image(0, 0, 'ui_button_small')
+            .setInteractive({ useHandCursor: true });
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
@@ -346,14 +343,44 @@ export default class MapScene extends Phaser.Scene {
         button.add([bg, label]);
 
         bg.on('pointerover', () => {
-            bg.setFillStyle(color + 0x222222);
+            bg.setTint(0xf7c66a);
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(color);
+            bg.clearTint();
         });
 
         bg.on('pointerdown', onClick);
+
+        return button;
+    }
+
+    createCloseButton(x, y) {
+        const button = this.add.container(x, y);
+
+        const bg = this.add.image(0, 0, 'ui_button_close')
+            .setInteractive({ useHandCursor: true });
+
+        const label = this.add.text(0, 0, '×', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        button.add([bg, label]);
+
+        bg.on('pointerover', () => {
+            bg.setTint(0xff6b6b);
+        });
+
+        bg.on('pointerout', () => {
+            bg.clearTint();
+        });
+
+        bg.on('pointerdown', () => {
+            this.close();
+        });
 
         return button;
     }

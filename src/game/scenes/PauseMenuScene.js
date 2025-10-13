@@ -17,7 +17,7 @@ export default class PauseMenuScene extends Phaser.Scene {
         // Panel menu
         this.add.rectangle(width / 2, height / 2, 500, 600, 0x2c3e50)
             .setStrokeStyle(4, 0xffffff);        // Tytuł
-        this.add.text(width / 2, height / 2 - 250, 'PAUZA', {
+        this.add.text(width / 2, height / 2 - 260, 'PAUZA', {
             fontFamily: 'Arial',
             fontSize: '48px',
             fontStyle: 'bold',
@@ -38,7 +38,7 @@ Siła: ${player.attributes.strength}
 Zręczność: ${player.attributes.dexterity}
 Inteligencja: ${player.attributes.intelligence}`;
 
-        this.add.text(width / 2, height / 2 - 100, infoText, {
+        this.add.text(width / 2, height / 2 - 120, infoText, {
             fontFamily: 'Arial',
             fontSize: '18px',
             color: '#ffffff',
@@ -47,16 +47,16 @@ Inteligencja: ${player.attributes.intelligence}`;
         }).setOrigin(0.5);
 
         // Przyciski
-        this.createButton(width / 2, height / 2 + 130, 'Wznów grę', () => {
+        this.createButton(width / 2, height / 2 + 90, 'Wznów grę', () => {
             this.resumeGame();
         }, 0x27ae60);
 
-        this.createButton(width / 2, height / 2 + 200, 'Zapisz grę', () => {
+        this.createButton(width / 2, height / 2 + 160, 'Zapisz grę', () => {
             GameState.saveGame();
             this.showSaveMessage();
         }, 0x3498db);
 
-        this.createButton(width / 2, height / 2 + 270, 'Wyjdź do menu', () => {
+        this.createButton(width / 2, height / 2 + 230, 'Wyjdź do menu', () => {
             this.exitToMenu();
         }, 0xe74c3c);
     }

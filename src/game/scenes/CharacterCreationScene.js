@@ -17,7 +17,7 @@ export default class CharacterCreationScene extends Phaser.Scene {
         this.add.rectangle(0, 0, width, height, 0x16213e).setOrigin(0);
 
         // Tytuł
-        this.add.text(width / 2, 50, 'STWÓRZ SWOJĄ POSTAĆ', {
+        this.add.text(width / 2, 40, 'STWÓRZ SWOJĄ POSTAĆ', {
             fontFamily: 'Arial',
             fontSize: '48px',
             fontStyle: 'bold',
@@ -25,16 +25,16 @@ export default class CharacterCreationScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Sekcja imienia
-        this.createNameSection(width / 2, 150);
+        this.createNameSection(width / 2, 120);
 
         // Sekcja rasy
-        this.createRaceSection(width / 4, 300);
+        this.createRaceSection(width / 4, 250);
 
         // Sekcja klasy
-        this.createClassSection(width * 3 / 4, 300);
+        this.createClassSection(width * 3 / 4, 250);
 
         // Podgląd statystyk
-        this.statsDisplay = this.add.text(width / 2, 550, '', {
+        this.statsDisplay = this.add.text(width / 2, 480, '', {
             fontFamily: 'Arial',
             fontSize: '18px',
             color: '#ffffff',
@@ -43,8 +43,8 @@ export default class CharacterCreationScene extends Phaser.Scene {
 
         this.updateStatsDisplay();
 
-        // Przycisk rozpoczęcia gry
-        this.createButton(width / 2, height - 100, 'ROZPOCZNIJ PRZYGODĘ', () => {
+        // Przycisk rozpoczęcia gry (przesuń niżej)
+        this.createButton(width / 2, 640, 'ROZPOCZNIJ PRZYGODĘ', () => {
             this.startGame();
         });
     }
@@ -59,21 +59,86 @@ export default class CharacterCreationScene extends Phaser.Scene {
         const inputBg = this.add.rectangle(x, y + 50, 400, 50, 0x2c3e50)
             .setStrokeStyle(2, 0xffffff);
 
-        const nameText = this.add.text(x, y + 50, 'Kliknij aby wpisać...', {
+        this.nameText = this.add.text(x, y + 50, '', {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        // Kursor migający
+        this.cursor = this.add.text(x, y + 50, '|', {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            color: '#ffffff'
+        }).setOrigin(0, 0.5).setVisible(false);
+
+        // Placeholder
+        this.placeholder = this.add.text(x, y + 50, 'Wpisz imię...', {
             fontFamily: 'Arial',
             fontSize: '20px',
             color: '#7f8c8d'
         }).setOrigin(0.5);
 
+        this.inputActive = false;
+        this.characterName = '';
+
         inputBg.setInteractive({ useHandCursor: true });
         inputBg.on('pointerdown', () => {
-            const name = prompt('Wpisz imię swojej postaci:', this.characterName || '');
-            if (name && name.trim().length > 0) {
-                this.characterName = name.trim();
-                nameText.setText(this.characterName);
-                nameText.setColor('#ffffff');
-            }
+            this.activateInput();
         });
+
+        // Obsługa klawiatury
+        this.input.keyboard.on('keydown', (event) => {
+            if (!this.inputActive) return;
+
+            if (event.key === 'Backspace') {
+                this.characterName = this.characterName.slice(0, -1);
+            } else if (event.key === 'Enter') {
+                this.deactivateInput();
+            } else if (event.key.length === 1 && this.characterName.length < 20) {
+                this.characterName += event.key;
+            }
+
+            this.updateNameDisplay();
+        });
+
+        // Animacja kursora
+        this.time.addEvent({
+            delay: 500,
+            callback: () => {
+                if (this.cursor && this.inputActive) {
+                    this.cursor.setVisible(!this.cursor.visible);
+                }
+            },
+            loop: true
+        });
+    }
+
+    activateInput() {
+        this.inputActive = true;
+        this.placeholder.setVisible(false);
+        this.cursor.setVisible(true);
+        this.updateNameDisplay();
+    }
+
+    deactivateInput() {
+        this.inputActive = false;
+        this.cursor.setVisible(false);
+        if (this.characterName.length === 0) {
+            this.placeholder.setVisible(true);
+        }
+    }
+
+    updateNameDisplay() {
+        this.nameText.setText(this.characterName);
+        const textWidth = this.nameText.width;
+        this.cursor.setPosition(this.nameText.x + textWidth / 2 + 2, this.nameText.y);
+
+        if (this.characterName.length === 0) {
+            this.placeholder.setVisible(!this.inputActive);
+        } else {
+            this.placeholder.setVisible(false);
+        }
     }
 
     createRaceSection(x, y) {
@@ -248,7 +313,7 @@ Inteligencja: ${totalIntelligence}`;
 
     startGame() {
         if (!this.characterName || this.characterName.length === 0) {
-            alert('Proszę wprowadzić imię postaci!');
+            this.showError('Proszę wprowadzić imię postaci!');
             return;
         }
 
@@ -272,5 +337,30 @@ Inteligencja: ${totalIntelligence}`;
 
         GameState.saveGame();
         this.scene.start('GameScene');
+    }
+
+    showError(message) {
+        const { width, height } = this.cameras.main;
+
+        const errorBg = this.add.rectangle(width / 2, height / 2, 500, 150, 0x000000, 0.8);
+        const errorText = this.add.text(width / 2, height / 2, message, {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            color: '#e74c3c',
+            align: 'center',
+            wordWrap: { width: 450 }
+        }).setOrigin(0.5);
+
+        this.time.delayedCall(2000, () => {
+            errorBg.destroy();
+            errorText.destroy();
+        });
+
+        this.tweens.add({
+            targets: [errorBg, errorText],
+            alpha: 0,
+            duration: 500,
+            delay: 1500
+        });
     }
 }

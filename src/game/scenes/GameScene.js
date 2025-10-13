@@ -8,10 +8,14 @@ export default class GameScene extends Phaser.Scene {
         this.enemies = [];
         this.items = [];
         this.map = null;
+        this.walls = null;
         this.uiElements = {};
     }
 
     create() {
+        // Ustaw granice świata (50x50 kafelków po 32px)
+        this.physics.world.setBounds(0, 0, 50 * 32, 50 * 32);
+
         // Tworzenie prostej mapy
         this.createMap();        // Tworzenie gracza
         this.createPlayer();
@@ -28,6 +32,7 @@ export default class GameScene extends Phaser.Scene {
         // Kamera śledzi gracza
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.setZoom(1);
+        this.cameras.main.setBounds(0, 0, 50 * 32, 50 * 32); // Granice kamery
 
         // Klawisze sterowania
         this.setupControls();
@@ -43,6 +48,7 @@ export default class GameScene extends Phaser.Scene {
         const tileSize = 32;
 
         this.map = this.add.group();
+        this.walls = this.physics.add.staticGroup(); // Grupa dla ścian z fizyką
 
         for (let y = 0; y < mapHeight; y++) {
             for (let x = 0; x < mapWidth; x++) {
@@ -68,6 +74,14 @@ export default class GameScene extends Phaser.Scene {
                     .setOrigin(0);
 
                 this.map.add(tile);
+
+                // Dodaj ściany do grupy fizyki
+                if (tileType === 'tile_wall') {
+                    const wallBody = this.walls.create(worldX + 16, worldY + 16, tileType);
+                    wallBody.setOrigin(0.5);
+                    wallBody.setVisible(false); // Ukryj duplikat (wizualny jest już dodany wyżej)
+                    wallBody.body.setSize(32, 32);
+                }
             }
         }
 
@@ -75,11 +89,18 @@ export default class GameScene extends Phaser.Scene {
         for (let i = 0; i < 50; i++) {
             const x = Phaser.Math.Between(2, mapWidth - 3);
             const y = Phaser.Math.Between(2, mapHeight - 3);
-            const wall = this.add.sprite(x * tileSize, y * tileSize, 'tile_wall')
+            const worldX = x * tileSize;
+            const worldY = y * tileSize;
+
+            const wall = this.add.sprite(worldX, worldY, 'tile_wall')
                 .setOrigin(0);
-            this.physics.add.existing(wall);
-            wall.body.setImmovable(true);
             this.map.add(wall);
+
+            // Dodaj do grupy fizyki
+            const wallBody = this.walls.create(worldX + 16, worldY + 16, 'tile_wall');
+            wallBody.setOrigin(0.5);
+            wallBody.setVisible(false);
+            wallBody.body.setSize(32, 32);
         }
     }
 
@@ -175,7 +196,7 @@ export default class GameScene extends Phaser.Scene {
             color: '#f39c12'
         });
 
-        const playerLevel = this.add.text(20, 45, `Poziom: ${GameState.player.level}`, {
+        this.uiElements.playerLevel = this.add.text(20, 45, `Poziom: ${GameState.player.level}`, {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#ffffff'
@@ -205,7 +226,7 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5, 0);
 
         uiContainer.add([
-            playerPanel, playerName, playerLevel,
+            playerPanel, playerName, this.uiElements.playerLevel,
             this.uiElements.healthBarBg, this.uiElements.healthBar, this.uiElements.healthText,
             this.uiElements.manaBarBg, this.uiElements.manaBar, this.uiElements.manaText
         ]);
@@ -289,6 +310,15 @@ export default class GameScene extends Phaser.Scene {
         // Mapa
         this.keys.map.on('down', () => this.showMap());
     } setupCollisions() {
+        // Kolizje gracza ze ścianami
+        this.physics.add.collider(this.player, this.walls);
+
+        // Kolizje wrogów ze ścianami
+        this.enemies.forEach(enemy => {
+            this.physics.add.collider(enemy, this.walls);
+            enemy.setCollideWorldBounds(true); // Dodaj granice świata
+        });
+
         // Kolizje gracza z przedmiotami
         this.items.forEach(item => {
             this.physics.add.overlap(this.player, item, () => {
@@ -581,6 +611,9 @@ export default class GameScene extends Phaser.Scene {
 
     updateUI() {
         const player = GameState.player;
+
+        // Aktualizuj poziom
+        this.uiElements.playerLevel.setText(`Poziom: ${player.level}`);
 
         // Aktualizuj paski zdrowia i many
         const healthPercent = player.attributes.health / player.attributes.maxHealth;

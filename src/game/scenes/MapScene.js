@@ -33,19 +33,20 @@ export default class MapScene extends Phaser.Scene {
         // Rysowanie mapy
         this.drawMap(width / 2, panelY - 20);
 
-        // Legenda
-        this.createLegend(width / 2 - 480, panelY + panelHeight / 2 - 80);
+        // Legenda (lewy dolny róg)
+        this.createLegend(width / 2 - 480, panelY + panelHeight / 2 - 100);
 
-        // Informacje o lokacji
-        this.locationInfo = this.add.text(width / 2, panelY + panelHeight / 2 - 40, '', {
+        // Informacje o lokacji (środek, wyżej)
+        this.locationInfo = this.add.text(width / 2, panelY + panelHeight / 2 - 110, '', {
             fontFamily: 'Arial',
-            fontSize: '16px',
+            fontSize: '15px',
             color: '#ffffff',
-            align: 'center'
+            align: 'center',
+            wordWrap: { width: 600 }
         }).setOrigin(0.5);
 
-        // Statystyki odkryć
-        this.createDiscoveryStats(width / 2, panelY + panelHeight / 2 - 10);
+        // Statystyki odkryć (prawy dolny róg, wyżej od krawędzi)
+        this.createDiscoveryStats(width / 2 + panelWidth / 2 - 20, panelY + panelHeight / 2 - 35);
 
         // Przycisk zamknięcia (w prawym górnym rogu panelu)
         this.createButton(width / 2 + panelWidth / 2 - 40, panelY - panelHeight / 2 + 40, 'X', () => {
@@ -302,10 +303,10 @@ export default class MapScene extends Phaser.Scene {
 
         this.add.text(x, y, stats, {
             fontFamily: 'Arial',
-            fontSize: '16px',
+            fontSize: '15px',
             color: '#95a5a6',
-            align: 'center'
-        }).setOrigin(0.5);
+            align: 'right'
+        }).setOrigin(1, 0.5);
     }
 
     showMessage(text, color) {

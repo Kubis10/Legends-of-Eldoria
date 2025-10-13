@@ -4,6 +4,8 @@
 ![React](https://img.shields.io/badge/React-18.2.0-blue)
 ![Phaser](https://img.shields.io/badge/Phaser-3.90.0-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+![Status](https://img.shields.io/badge/Status-Active-brightgreen)
+![Version](https://img.shields.io/badge/Version-1.0.0-blueviolet)
 
 ## 📖 Opis
 

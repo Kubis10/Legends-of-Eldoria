@@ -15,33 +15,55 @@ export default class QuestScene extends Phaser.Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
-        // Panel questów
+        // Panel questów (niżej żeby tytuł się zmieścił)
         const panelWidth = 1000;
-        const panelHeight = 640;
-        this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x2c3e50)
+        const panelHeight = 600;
+        const panelY = height / 2 + 10;
+        this.add.rectangle(width / 2, panelY, panelWidth, panelHeight, 0x2c3e50)
             .setStrokeStyle(4, 0xf39c12);
 
-        // Tytuł
-        this.add.text(width / 2, height / 2 - 300, '📜 DZIENNIK QUESTÓW 📜', {
+        // Tytuł (wewnątrz panelu)
+        this.add.text(width / 2, panelY - panelHeight / 2 + 35, '📜 DZIENNIK QUESTÓW 📜', {
             fontFamily: 'Arial',
-            fontSize: '42px',
+            fontSize: '36px',
             fontStyle: 'bold',
             color: '#f39c12'
         }).setOrigin(0.5);
 
         // Zakładki
         this.currentTab = 'active';
-        this.createTabs(width / 2, height / 2 - 240);
+        this.createTabs(width / 2, panelY - panelHeight / 2 + 85);
 
-        // Obszar questów
+        // Obszar questów z możliwością przewijania
+        this.scrollY = 0;
         this.questsContainer = this.add.container(0, 0);
+
+        // Maska dla obszaru questów (tylko to co jest w strefie jest widoczne)
+        const maskX = width / 2 - 450;
+        const maskY = panelY - panelHeight / 2 + 135;
+        const maskWidth = 900;
+        const maskHeight = 380; // Wysokość strefy przewijania
+
+        const maskShape = this.make.graphics();
+        maskShape.fillStyle(0xffffff);
+        maskShape.fillRect(maskX, maskY, maskWidth, maskHeight);
+        this.questsMask = maskShape.createGeometryMask();
+        this.questsContainer.setMask(this.questsMask);
+
+        // Zapisz parametry dla przewijania
+        this.scrollArea = { x: maskX, y: maskY, width: maskWidth, height: maskHeight };
+        this.maxScroll = 0;
+
         this.displayQuests();
 
-        // Statystyki (dół)
-        this.createStats(width / 2, height / 2 + 280);
+        // Obsługa scrolla
+        this.setupScrolling();
 
-        // Przycisk zamknięcia
-        this.createButton(width / 2 + 380, height / 2 - 300, 'X', () => {
+        // Statystyki (dół)
+        this.createStats(width / 2, panelY + panelHeight / 2 - 30);
+
+        // Przycisk zamknięcia (w prawym górnym rogu panelu)
+        this.createButton(width / 2 + panelWidth / 2 - 40, panelY - panelHeight / 2 + 40, 'X', () => {
             this.close();
         }, 0xe74c3c, 50, 50);
 
@@ -57,6 +79,9 @@ export default class QuestScene extends Phaser.Scene {
             { key: 'completed', label: 'Ukończone', color: 0x27ae60 },
             { key: 'available', label: 'Dostępne', color: 0xf39c12 }
         ];
+
+        this.tabButtons = [];
+        this.tabLabels = [];
 
         tabs.forEach((tab, index) => {
             const tabX = x - 200 + index * 200;
@@ -75,8 +100,10 @@ export default class QuestScene extends Phaser.Scene {
             }).setOrigin(0.5);
 
             button.on('pointerdown', () => {
-                this.currentTab = tab.key;
-                this.scene.restart();
+                if (this.currentTab !== tab.key) {
+                    this.currentTab = tab.key;
+                    this.switchTab(tab.key);
+                }
             });
 
             button.on('pointerover', () => {
@@ -90,11 +117,27 @@ export default class QuestScene extends Phaser.Scene {
                     button.setFillStyle(0x34495e);
                 }
             });
+
+            this.tabButtons.push({ button, tab });
+            this.tabLabels.push(label);
         });
+    }
+
+    switchTab(newTab) {
+        // Aktualizuj wygląd przycisków
+        this.tabButtons.forEach(({ button, tab }) => {
+            const isActive = tab.key === newTab;
+            button.setFillStyle(isActive ? tab.color : 0x34495e);
+            button.setStrokeStyle(2, isActive ? 0xffffff : 0x7f8c8d);
+        });
+
+        // Odśwież listę questów
+        this.displayQuests();
     }
 
     displayQuests() {
         this.questsContainer.removeAll(true);
+        this.scrollY = 0; // Reset scroll przy zmianie zakładki
 
         let quests = [];
         if (this.currentTab === 'active') {
@@ -106,7 +149,10 @@ export default class QuestScene extends Phaser.Scene {
         }
 
         const { width, height } = this.cameras.main;
-        const startY = height / 2 - 180;
+        const panelY = height / 2 + 10;
+        const panelHeight = 600;
+        // Pierwszy quest powinien mieć środek 60px poniżej górnej krawędzi maski
+        const startY = panelY - panelHeight / 2 + 135 + 60;
 
         if (quests.length === 0) {
             const emptyText = this.add.text(width / 2, height / 2,
@@ -119,6 +165,7 @@ export default class QuestScene extends Phaser.Scene {
                 align: 'center'
             }).setOrigin(0.5);
             this.questsContainer.add(emptyText);
+            this.maxScroll = 0;
             return;
         }
 
@@ -126,6 +173,14 @@ export default class QuestScene extends Phaser.Scene {
             const questY = startY + index * 120;
             this.createQuestCard(width / 2, questY, quest, index);
         });
+
+        // Oblicz maksymalny scroll
+        const totalHeight = quests.length * 120;
+        const visibleHeight = this.scrollArea.height;
+        this.maxScroll = Math.max(0, totalHeight - visibleHeight);
+
+        // Zaktualizuj pozycję kontenera
+        this.updateScroll();
     }
 
     createQuestCard(x, y, quest, index) {
@@ -168,11 +223,18 @@ export default class QuestScene extends Phaser.Scene {
             wordWrap: { width: 500 }
         }).setOrigin(0, 0.5);
 
+        // Elementy do dodania do kontenera
+        const cardElements = [cardBg, icon, title, description];
+
         // Postęp celów
         if (quest.objectives && this.currentTab !== 'completed') {
             const objective = quest.objectives[0]; // Pokazujemy pierwszy cel
             const progress = `${objective.current || 0}/${objective.count}`;
-            const progressText = this.add.text(x + 300, y - 20, progress, {
+            // Sprawdź czy będzie przycisk po prawej (Przyjmij lub Odbierz)
+            const hasButton = this.currentTab === 'available' ||
+                (this.currentTab === 'active' && this.isQuestCompleted(quest));
+            const progressX = hasButton ? x + 240 : x + 300; // Lewo jeśli jest przycisk
+            const progressText = this.add.text(progressX, y - 20, progress, {
                 fontFamily: 'Arial',
                 fontSize: '20px',
                 fontStyle: 'bold',
@@ -183,11 +245,13 @@ export default class QuestScene extends Phaser.Scene {
             const progressBarWidth = 150;
             const progressPercent = (objective.current || 0) / objective.count;
 
-            this.add.rectangle(x + 300, y + 15, progressBarWidth, 8, 0x7f8c8d)
+            const progressBarBg = this.add.rectangle(progressX, y + 15, progressBarWidth, 8, 0x7f8c8d)
                 .setOrigin(0.5);
-            this.add.rectangle(x + 300 - progressBarWidth / 2, y + 15,
+            const progressBarFill = this.add.rectangle(progressX - progressBarWidth / 2, y + 15,
                 progressBarWidth * progressPercent, 8, 0x2ecc71)
                 .setOrigin(0, 0.5);
+
+            cardElements.push(progressText, progressBarBg, progressBarFill);
         }
 
         // Nagrody
@@ -204,20 +268,23 @@ export default class QuestScene extends Phaser.Scene {
             color: '#95a5a6'
         }).setOrigin(0, 0.5);
 
+        cardElements.push(rewardText);
+
         // Przycisk akcji
         if (this.currentTab === 'available') {
             const acceptBtn = this.createButton(x + 380, y, 'Przyjmij', () => {
                 this.acceptQuest(quest);
             }, 0x27ae60, 100, 40);
-            this.questsContainer.add(acceptBtn);
+            cardElements.push(acceptBtn);
         } else if (this.currentTab === 'active' && this.isQuestCompleted(quest)) {
             const completeBtn = this.createButton(x + 380, y, 'Odbierz', () => {
                 this.completeQuest(quest);
             }, 0x2ecc71, 100, 40);
-            this.questsContainer.add(completeBtn);
+            cardElements.push(completeBtn);
         }
 
-        this.questsContainer.add([cardBg, icon, title, description, rewardText]);
+        // Dodaj wszystkie elementy karty do kontenera
+        this.questsContainer.add(cardElements);
     }
 
     getAvailableQuests() {
@@ -297,6 +364,39 @@ export default class QuestScene extends Phaser.Scene {
             duration: 2000,
             onComplete: () => message.destroy()
         });
+    }
+
+    setupScrolling() {
+        // Obsługa kółka myszy
+        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+            if (this.maxScroll > 0) {
+                this.scrollY += deltaY * 0.3;
+                this.scrollY = Phaser.Math.Clamp(this.scrollY, 0, this.maxScroll);
+                this.updateScroll();
+            }
+        });
+
+        // Obsługa klawiszy strzałek
+        const upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+        const downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+
+        upKey.on('down', () => {
+            if (this.maxScroll > 0) {
+                this.scrollY = Math.max(0, this.scrollY - 30);
+                this.updateScroll();
+            }
+        });
+
+        downKey.on('down', () => {
+            if (this.maxScroll > 0) {
+                this.scrollY = Math.min(this.maxScroll, this.scrollY + 30);
+                this.updateScroll();
+            }
+        });
+    }
+
+    updateScroll() {
+        this.questsContainer.y = -this.scrollY;
     }
 
     createButton(x, y, text, onClick, color = 0x3498db, w = 150, h = 40) {

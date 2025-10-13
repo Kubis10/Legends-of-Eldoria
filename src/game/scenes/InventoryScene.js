@@ -15,47 +15,49 @@ export default class InventoryScene extends Phaser.Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
-        // Panel ekwipunku
+        // Panel ekwipunku (mniejszy i niżej)
         const panelWidth = 900;
-        const panelHeight = 600;
-        this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x2c3e50)
+        const panelHeight = 560;
+        const panelY = height / 2 + 20; // Przesunięty niżej
+        this.add.rectangle(width / 2, panelY, panelWidth, panelHeight, 0x2c3e50)
             .setStrokeStyle(4, 0xf39c12);
 
-        // Tytuł
-        this.add.text(width / 2, height / 2 - 280, '⚔️ EKWIPUNEK ⚔️', {
+        // Tytuł (wewnątrz panelu)
+        this.add.text(width / 2, panelY - panelHeight / 2 + 35, '⚔️ EKWIPUNEK ⚔️', {
             fontFamily: 'Arial',
-            fontSize: '42px',
+            fontSize: '36px',
             fontStyle: 'bold',
             color: '#f39c12'
         }).setOrigin(0.5);
 
         // Sekcja statystyk gracza (lewa strona)
-        this.createPlayerStats(width / 2 - 350, height / 2 - 200);
+        this.createPlayerStats(width / 2 - 380, panelY - panelHeight / 2 + 80);
 
-        // Sekcja założonego ekwipunku (środek)
-        this.createEquippedItems(width / 2 - 100, height / 2 - 200);
+        // Sekcja założonego ekwipunku (środek-lewo)
+        this.createEquippedItems(width / 2 - 150, panelY - panelHeight / 2 + 80);
 
         // Sekcja inwentarza (prawa strona)
-        this.createInventoryGrid(width / 2 + 100, height / 2 - 200);
+        this.createInventoryGrid(width / 2 + 80, panelY - panelHeight / 2 + 80);
 
-        // Informacje o zaznaczonym przedmiocie (dół)
-        this.itemInfoText = this.add.text(width / 2, height / 2 + 220, '', {
+        // Informacje o zaznaczonym przedmiocie (dół) + pomoc
+        this.itemInfoText = this.add.text(width / 2 - 250, panelY + panelHeight / 2 - 70, 'Najedź na przedmiot aby zobaczyć szczegóły\nKliknij aby użyć/założyć/zdjąć', {
             fontFamily: 'Arial',
-            fontSize: '18px',
-            color: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
+            fontSize: '14px',
+            color: '#95a5a6',
+            align: 'left',
+            lineSpacing: 3
+        }).setOrigin(0, 0.5);
 
         // Złoto
-        this.add.text(width / 2 - 400, height / 2 + 260, `💰 Złoto: ${GameState.currency}`, {
+        this.add.text(width / 2 - 400, panelY + panelHeight / 2 - 30, `💰 Złoto: ${GameState.currency}`, {
             fontFamily: 'Arial',
-            fontSize: '24px',
+            fontSize: '22px',
             fontStyle: 'bold',
             color: '#f1c40f'
         }).setOrigin(0, 0.5);
 
-        // Przycisk zamknięcia
-        this.createButton(width / 2 + 300, height / 2 + 260, 'Zamknij (I)', () => {
+        // Przycisk zamknięcia (wewnątrz panelu, nie nachodzi na eq)
+        this.createButton(width / 2 + 320, panelY + panelHeight / 2 - 30, 'Zamknij (I)', () => {
             this.close();
         }, 0xe74c3c);
 
@@ -99,38 +101,39 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     createEquippedItems(x, y) {
-        this.add.text(x + 80, y, 'ZAŁOŻONE', {
+        this.add.text(x + 70, y, 'ZAŁOŻONE', {
             fontFamily: 'Arial',
-            fontSize: '22px',
+            fontSize: '20px',
             fontStyle: 'bold',
             color: '#3498db'
         }).setOrigin(0.5, 0);
 
         const equipment = GameState.player.equipment;
         const slots = [
-            { type: 'weapon', label: '⚔️ Broń', y: 50 },
-            { type: 'armor', label: '🛡️ Zbroja', y: 130 },
-            { type: 'accessory', label: '💍 Akcesoria', y: 210 }
+            { type: 'weapon', label: '⚔️ Broń', y: 60 },
+            { type: 'armor', label: '🛡️ Zbroja', y: 160 },
+            { type: 'accessory', label: '💍 Akcesoria', y: 260 }
         ];
 
         slots.forEach(slot => {
-            const slotBg = this.add.rectangle(x + 80, y + slot.y, 140, 60, 0x34495e)
-                .setStrokeStyle(2, 0x7f8c8d);
-
-            this.add.text(x + 80, y + slot.y - 40, slot.label, {
+            // Label nad slotem
+            this.add.text(x + 70, y + slot.y - 25, slot.label, {
                 fontFamily: 'Arial',
-                fontSize: '16px',
+                fontSize: '15px',
                 color: '#ecf0f1'
             }).setOrigin(0.5);
 
+            const slotBg = this.add.rectangle(x + 70, y + slot.y + 20, 130, 60, 0x34495e)
+                .setStrokeStyle(2, 0x7f8c8d);
+
             const item = equipment[slot.type];
             if (item) {
-                const itemText = this.add.text(x + 80, y + slot.y, item.name, {
+                const itemText = this.add.text(x + 70, y + slot.y + 20, item.name, {
                     fontFamily: 'Arial',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     color: '#2ecc71',
                     align: 'center',
-                    wordWrap: { width: 130 }
+                    wordWrap: { width: 120 }
                 }).setOrigin(0.5);
 
                 slotBg.setInteractive({ useHandCursor: true });
@@ -148,9 +151,9 @@ export default class InventoryScene extends Phaser.Scene {
                     slotBg.setStrokeStyle(2, 0x7f8c8d);
                 });
             } else {
-                this.add.text(x + 80, y + slot.y, 'Pusty', {
+                this.add.text(x + 70, y + slot.y + 20, 'Pusty', {
                     fontFamily: 'Arial',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     color: '#7f8c8d'
                 }).setOrigin(0.5);
             }
@@ -158,18 +161,18 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     createInventoryGrid(x, y) {
-        this.add.text(x + 180, y, 'PLECAK', {
+        this.add.text(x + 150, y, 'PLECAK', {
             fontFamily: 'Arial',
-            fontSize: '22px',
+            fontSize: '20px',
             fontStyle: 'bold',
             color: '#3498db'
         }).setOrigin(0.5, 0);
 
         const inventory = GameState.inventory;
         const cols = 4;
-        const rows = 6;
-        const cellSize = 80;
-        const padding = 10;
+        const rows = 5; // Zmniejszono z 6 do 5 rzędów, aby się zmieściło
+        const cellSize = 75;
+        const padding = 8;
 
         this.inventorySlots = [];
 
@@ -177,7 +180,7 @@ export default class InventoryScene extends Phaser.Scene {
             for (let col = 0; col < cols; col++) {
                 const index = row * cols + col;
                 const cellX = x + col * (cellSize + padding);
-                const cellY = y + 50 + row * (cellSize + padding);
+                const cellY = y + 40 + row * (cellSize + padding);
 
                 const cell = this.add.rectangle(cellX, cellY, cellSize, cellSize, 0x34495e)
                     .setStrokeStyle(2, 0x7f8c8d)
@@ -188,18 +191,16 @@ export default class InventoryScene extends Phaser.Scene {
 
                     // Ikona przedmiotu (kolorowy kwadrat)
                     const iconColor = this.getItemColor(item.type);
-                    this.add.rectangle(cellX, cellY - 10, 40, 40, iconColor);
+                    this.add.rectangle(cellX, cellY - 12, 38, 38, iconColor);
 
                     // Nazwa przedmiotu
-                    const nameText = this.add.text(cellX, cellY + 25, item.name, {
+                    const nameText = this.add.text(cellX, cellY + 23, item.name, {
                         fontFamily: 'Arial',
-                        fontSize: '11px',
+                        fontSize: '10px',
                         color: '#ffffff',
                         align: 'center',
-                        wordWrap: { width: 70 }
-                    }).setOrigin(0.5);
-
-                    cell.on('pointerover', () => {
+                        wordWrap: { width: 68 }
+                    }).setOrigin(0.5); cell.on('pointerover', () => {
                         this.showItemInfo(item);
                         cell.setStrokeStyle(2, 0xf39c12);
                     });
@@ -217,14 +218,6 @@ export default class InventoryScene extends Phaser.Scene {
                 this.inventorySlots.push(cell);
             }
         }
-
-        // Informacja o kontrolach
-        this.add.text(x + 180, y + 430, 'Kliknij aby użyć/założyć', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#95a5a6',
-            align: 'center'
-        }).setOrigin(0.5);
     }
 
     getItemColor(type) {
@@ -401,13 +394,13 @@ export default class InventoryScene extends Phaser.Scene {
     createButton(x, y, text, onClick, color = 0x3498db) {
         const button = this.add.container(x, y);
 
-        const bg = this.add.rectangle(0, 0, 180, 45, color)
+        const bg = this.add.rectangle(0, 0, 160, 40, color)
             .setInteractive({ useHandCursor: true })
-            .setStrokeStyle(3, 0xffffff);
+            .setStrokeStyle(2, 0xffffff);
 
         const label = this.add.text(0, 0, text, {
             fontFamily: 'Arial',
-            fontSize: '18px',
+            fontSize: '16px',
             color: '#ffffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);

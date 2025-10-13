@@ -15,28 +15,29 @@ export default class MapScene extends Phaser.Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
-        // Panel mapy
+        // Panel mapy (niżej żeby tytuł się zmieścił)
         const panelWidth = 1100;
-        const panelHeight = 650;
-        this.add.rectangle(width / 2, height / 2, panelWidth, panelHeight, 0x1a1a2e)
+        const panelHeight = 620;
+        const panelY = height / 2 + 10;
+        this.add.rectangle(width / 2, panelY, panelWidth, panelHeight, 0x1a1a2e)
             .setStrokeStyle(4, 0xf39c12);
 
-        // Tytuł
-        this.add.text(width / 2, height / 2 - 305, '🗺️ MAPA ELDORII 🗺️', {
+        // Tytuł (wewnątrz panelu)
+        this.add.text(width / 2, panelY - panelHeight / 2 + 35, '🗺️ MAPA ELDORII 🗺️', {
             fontFamily: 'Arial',
-            fontSize: '42px',
+            fontSize: '36px',
             fontStyle: 'bold',
             color: '#f39c12'
         }).setOrigin(0.5);
 
         // Rysowanie mapy
-        this.drawMap(width / 2, height / 2);
+        this.drawMap(width / 2, panelY - 20);
 
         // Legenda
-        this.createLegend(width / 2 - 480, height / 2 + 230);
+        this.createLegend(width / 2 - 480, panelY + panelHeight / 2 - 80);
 
         // Informacje o lokacji
-        this.locationInfo = this.add.text(width / 2, height / 2 + 270, '', {
+        this.locationInfo = this.add.text(width / 2, panelY + panelHeight / 2 - 40, '', {
             fontFamily: 'Arial',
             fontSize: '16px',
             color: '#ffffff',
@@ -44,10 +45,10 @@ export default class MapScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Statystyki odkryć
-        this.createDiscoveryStats(width / 2, height / 2 + 300);
+        this.createDiscoveryStats(width / 2, panelY + panelHeight / 2 - 10);
 
-        // Przycisk zamknięcia
-        this.createButton(width / 2 + 480, height / 2 - 305, 'X', () => {
+        // Przycisk zamknięcia (w prawym górnym rogu panelu)
+        this.createButton(width / 2 + panelWidth / 2 - 40, panelY - panelHeight / 2 + 40, 'X', () => {
             this.close();
         }, 0xe74c3c, 50, 50);
 

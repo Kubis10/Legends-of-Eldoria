@@ -4,6 +4,8 @@ import GameState from '../GameState';
 export default class PauseMenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'PauseMenuScene' });
+        this._escKey = null;
+        this._onEscDown = null;
     }
 
     create() {
@@ -38,6 +40,15 @@ export default class PauseMenuScene extends Phaser.Scene {
         this.createButton(width / 2, height / 2 + 110, 'Wyjdź do menu', () => {
             this.exitToMenu();
         }, 0xe74c3c);
+
+        // ESC should close the pause menu (toggle behavior)
+        this._onEscDown = () => this.resumeGame();
+        this._escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+        this._escKey.on('down', this._onEscDown, this);
+
+        // Clean up listeners when the scene is shut down or destroyed
+        this.events.once('shutdown', this._cleanupInput, this);
+        this.events.once('destroy', this._cleanupInput, this);
     }
 
     createButton(x, y, text, onClick, color = 0x3498db) {
@@ -111,5 +122,14 @@ export default class PauseMenuScene extends Phaser.Scene {
         this.scene.stop('GameScene');
         this.scene.stop();
         this.scene.start('MainMenuScene');
+    }
+
+    _cleanupInput() {
+        if (this._escKey) {
+            this._escKey.off('down', this._onEscDown, this);
+            this.input.keyboard.removeKey(this._escKey);
+            this._escKey = null;
+        }
+        this._onEscDown = null;
     }
 }

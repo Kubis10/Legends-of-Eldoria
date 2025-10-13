@@ -156,12 +156,12 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     createInventoryGrid(x, y) {
-        this.add.text(x + 150, y, 'PLECAK', {
+        this.add.text(x + 120, y, 'PLECAK', {
             fontFamily: 'Arial',
             fontSize: '20px',
             fontStyle: 'bold',
             color: '#3498db'
-        }).setOrigin(0.5, 0);
+        }).setOrigin(0.5, 0).setDepth(1000);
 
         const inventory = GameState.inventory;
         const cols = 4;
@@ -175,7 +175,7 @@ export default class InventoryScene extends Phaser.Scene {
             for (let col = 0; col < cols; col++) {
                 const index = row * cols + col;
                 const cellX = x + col * (cellSize + padding);
-                const cellY = y + 40 + row * (cellSize + padding);
+                const cellY = y + 70 + row * (cellSize + padding);
 
                 const cell = this.add.image(cellX, cellY, 'ui_slot')
                     .setInteractive({ useHandCursor: true });

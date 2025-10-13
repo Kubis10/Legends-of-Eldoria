@@ -140,22 +140,21 @@ export default class BootScene extends Phaser.Scene {
     createPanelTexture(key, width, height, baseColor = 0x4a2c2a) {
         const g = this.add.graphics();
         const radius = 12;
-        // Tło z ciepłym gradientem (ciemnobrązowy do ciemnoczerwononanego) - zaokrąglone
-        const top = 0x6b3a35; // ciepły brąz
-        const bottom = 0x3a1f1d; // ciemny brąz
-        this.drawRoundedGradient(g, 0, 0, width, height, top, bottom, radius, 32);
-        // Obrys (złoty) - zaokrąglony prostokąt z dostosowanym promieniem
+        // Jednolity kolor tła (bez gradientu) z zaokrąglonymi rogami
+        g.fillStyle(0x5b3a32, 1); // ciepły brąz
+        try {
+            g.fillRoundedRect(0, 0, width, height, radius);
+        } catch (e) {
+            this.drawRoundedRect(g, 0, 0, width, height, radius, true);
+        }
+        // Obrys (złoty) - dopasowany promień (odrobinę mniejszy od tła)
         g.lineStyle(4, 0xd4af37, 1);
-        const borderRadius = Math.max(radius - 2, 4); // Promień obrysu mniejszy o grubość obramowania
+        const borderRadius = Math.max(radius - 2, 4);
         try {
             g.strokeRoundedRect(2, 2, width - 4, height - 4, borderRadius);
         } catch (e) {
-            // Fallback do naszej custom funkcji
             this.drawRoundedRect(g, 2, 2, width - 4, height - 4, borderRadius, false);
         }
-        // Ciepły połysk u góry
-        g.fillStyle(0xffd700, 0.08);
-        this.drawRoundedRect(g, 6, 6, width - 12, Math.max(18, Math.floor(height * 0.15)), Math.max(radius - 6, 0), true);
         g.generateTexture(key, width, height);
         g.destroy();
     }
@@ -163,25 +162,21 @@ export default class BootScene extends Phaser.Scene {
     createButtonTexture(key, width, height, color) {
         const g = this.add.graphics();
         const radius = 10;
-        // Ciepły gradient dla przycisków (ciemnogranatowy z brązowym odcieniem) - zaokrąglony
-        const top = 0x4a5568; // ciepły szary
-        const bottom = 0x2c3840; // ciemny szaro-niebieski
-        this.drawRoundedGradient(g, 0, 0, width, height, top, bottom, radius, 24);
-        // Obrys z dostosowanym promieniem
-        g.lineStyle(3, 0xd4af37, 0.9); // złoty obrys
+        // Jednolity kolor tła przycisku
+        const fillColor = (typeof color === 'number') ? color : 0x3b4756;
+        g.fillStyle(fillColor, 1);
+        try {
+            g.fillRoundedRect(0, 0, width, height, radius);
+        } catch (e) {
+            this.drawRoundedRect(g, 0, 0, width, height, radius, true);
+        }
+        // Obrys
+        g.lineStyle(3, 0xd4af37, 0.9);
         const borderRadius = Math.max(radius - 1.5, 4);
         try {
             g.strokeRoundedRect(1.5, 1.5, width - 3, height - 3, borderRadius);
         } catch (e) {
             this.drawRoundedRect(g, 1.5, 1.5, width - 3, height - 3, borderRadius, false);
-        }
-        // Subtelny cień wewnętrzny
-        g.lineStyle(2, 0x000000, 0.25);
-        const innerRadius = Math.max(radius - 4, 2);
-        try {
-            g.strokeRoundedRect(4, 4, width - 8, height - 8, innerRadius);
-        } catch (e) {
-            this.drawRoundedRect(g, 4, 4, width - 8, height - 8, innerRadius, false);
         }
         g.generateTexture(key, width, height);
         g.destroy();
@@ -190,21 +185,19 @@ export default class BootScene extends Phaser.Scene {
     createSlotTexture(key, width, height) {
         const g = this.add.graphics();
         const radius = 8;
-        // Ciepły brązowy gradient dla slotów - zaokrąglony
-        this.drawRoundedGradient(g, 0, 0, width, height, 0x5d4037, 0x3e2723, radius, 18);
-        g.lineStyle(2, 0xa0783b, 1); // brązowy obrys
+        // Jednolity kolor slotu
+        g.fillStyle(0x4a3a2f, 1);
+        try {
+            g.fillRoundedRect(0, 0, width, height, radius);
+        } catch (e) {
+            this.drawRoundedRect(g, 0, 0, width, height, radius, true);
+        }
+        g.lineStyle(2, 0xa0783b, 1);
         const borderRadius = Math.max(radius - 1, 3);
         try {
             g.strokeRoundedRect(1, 1, width - 2, height - 2, borderRadius);
         } catch (e) {
             this.drawRoundedRect(g, 1, 1, width - 2, height - 2, borderRadius, false);
-        }
-        // Subtelne kropki tekstury
-        g.fillStyle(0xffd700, 0.04);
-        for (let i = 0; i < Math.floor((width * height) / 80); i++) {
-            const px = Phaser.Math.Between(4, width - 4);
-            const py = Phaser.Math.Between(4, height - 4);
-            g.fillRect(px, py, 2, 2);
         }
         g.generateTexture(key, width, height);
         g.destroy();
@@ -213,24 +206,19 @@ export default class BootScene extends Phaser.Scene {
     createCardTexture(key, width, height) {
         const g = this.add.graphics();
         const radius = 12;
-        // Ciepły gradient dla kart (ciemnobrzowy do prawie czarnego) - zaokrąglony
-        const top = 0x4e342e;
-        const bottom = 0x2e1e1a;
-        this.drawRoundedGradient(g, 0, 0, width, height, top, bottom, radius, 20);
-        g.lineStyle(3, 0x8b6914, 0.9); // ciepły złoty obrys
+        // Jednolity kolor karty (bez połysku)
+        g.fillStyle(0x4e342e, 1);
+        try {
+            g.fillRoundedRect(0, 0, width, height, radius);
+        } catch (e) {
+            this.drawRoundedRect(g, 0, 0, width, height, radius, true);
+        }
+        g.lineStyle(3, 0x8b6914, 0.9);
         const borderRadius = Math.max(radius - 1.5, 4);
         try {
             g.strokeRoundedRect(1.5, 1.5, width - 3, height - 3, borderRadius);
         } catch (e) {
             this.drawRoundedRect(g, 1.5, 1.5, width - 3, height - 3, borderRadius, false);
-        }
-        // delikatny złoty połysk
-        g.fillStyle(0xffd700, 0.08);
-        const glowRadius = Math.max(radius - 6, 2);
-        try {
-            g.fillRoundedRect(6, 6, width - 12, Math.max(14, Math.floor(height * 0.2)), glowRadius);
-        } catch (e) {
-            this.drawRoundedRect(g, 6, 6, width - 12, Math.max(14, Math.floor(height * 0.2)), glowRadius, true);
         }
         g.generateTexture(key, width, height);
         g.destroy();

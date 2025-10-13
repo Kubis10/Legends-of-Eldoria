@@ -85,7 +85,7 @@ export default class LevelUpScene extends Phaser.Scene {
 
         // Przycisk kontynuacji
         this.time.delayedCall(3000, () => {
-            const button = this.createButton(width / 2, height / 2 + 180, 'KONTYNUUJ', () => {
+            const button = this.createButton(width / 2, height / 2 + 200, 'KONTYNUUJ', () => {
                 this.close();
             }, 0x27ae60);
 

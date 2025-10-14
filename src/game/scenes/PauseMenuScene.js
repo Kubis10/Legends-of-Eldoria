@@ -43,7 +43,7 @@ export default class PauseMenuScene extends Phaser.Scene {
 
         // Instrukcje sterowania (prawy górny róg ekranu)
         this.add.text(width - 10, 10,
-            'STEROWANIE:\nWASD/Strzałki - Ruch\nSPACJA - Atak\n1-2 - Umiejętności\nE - Interakcja/Zbierz\nI - Ekwipunek\nQ - Questy\nM - Mapa\nESC - Menu', {
+            'STEROWANIE:\nWASD/Strzałki - Ruch\nSPACJA - Atak\n1-2 - Umiejętności\nE - Interakcja/Zbierz\nI - Ekwipunek\nQ - Questy\nM - Mapa\nN - Przełącz muzykę\nESC - Menu', {
             fontFamily: 'Arial',
             fontSize: '14px',
             color: '#ecf0f1',

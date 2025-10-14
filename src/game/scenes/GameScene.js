@@ -13,7 +13,154 @@ export default class GameScene extends Phaser.Scene {
         this.playerIsDead = false;
     }
 
+    // Bezpieczne odtwarzanie dźwięków
+    playSound(key, config = {}) {
+        try {
+            if (this.sound.context && this.sound.context.state === 'suspended') {
+                this.sound.context.resume().then(() => {
+                    if (this.sound.get(key)) this.sound.play(key, config);
+                }).catch(() => { });
+                return;
+            }
+            if (this.sound.get(key)) {
+                this.sound.play(key, config);
+            } else {
+                console.warn(`Sound '${key}' not found in cache`);
+            }
+        } catch (error) {
+            console.error(`Error playing sound '${key}':`, error);
+        }
+    }
+
+    // Uruchom audio context po pierwszej interakcji użytkownika
+    startAudioContext() {
+        if (!this.audioStarted && this.sound.context) {
+            try {
+                if (this.sound.context.state === 'suspended') {
+                    this.sound.context.resume().then(() => {
+                        this.audioStarted = true;
+                        this._maybeStartBgm();
+                    });
+                } else {
+                    this.audioStarted = true;
+                    this._maybeStartBgm();
+                }
+            } catch (error) {
+                console.warn('Could not start audio context:', error);
+            }
+        }
+    }
+
+    _maybeStartBgm() {
+        // Nie uruchamiaj jeśli już gra lub wyłączono
+        if (this.bgmDisabled) return;
+        if (this.bgm) return;
+        const exists = this.sound.get('bgm_main') || this.cache.audio.exists('bgm_main');
+        if (exists) {
+            try {
+                // Jeśli jeszcze nie dodane jako Sound obiekt – dodaj
+                if (!this.sound.get('bgm_main')) {
+                    this.bgm = this.sound.add('bgm_main', { loop: true, volume: 0 });
+                } else {
+                    this.bgm = this.sound.get('bgm_main');
+                    this.bgm.setLoop(true);
+                    this.bgm.setVolume(0);
+                }
+                this.bgm.play();
+                // Fade in do docelowego poziomu (0.4)
+                this.tweens.add({
+                    targets: this.bgm,
+                    volume: 0.4,
+                    duration: 1500,
+                    ease: 'Sine.easeInOut'
+                });
+                // BGM started (log removed for production)
+            } catch (e) {
+                console.warn('Cannot start bgm_main:', e);
+            }
+        } else {
+            // bgm_main not yet available – silent retry
+        }
+    }
+
     create() {
+        // Nie uruchamiaj muzyki automatycznie - poczekaj na interakcję użytkownika
+        this.audioStarted = false;
+        this.bgm = null;
+        this.bgmDisabled = false; // ustaw na true jeśli chcesz mieć domyślnie wyciszone
+        if (!this._audioUnlockBound) {
+            const unlock = () => {
+                if (this.sound && this.sound.context && this.sound.context.state === 'suspended') {
+                    this.sound.context.resume().catch(() => { });
+                } else {
+                    // Kontekst już aktywny – oznacz i spróbuj uruchomić BGM
+                    if (!this.audioStarted) {
+                        this.audioStarted = true;
+                        this._maybeStartBgm();
+                    }
+                }
+                // Po resume spróbuj wystartować muzykę jeśli jeszcze nie ustawiono
+                if (!this.audioStarted) {
+                    this.audioStarted = true;
+                    this._maybeStartBgm();
+                }
+                window.removeEventListener('pointerdown', unlock);
+                window.removeEventListener('keydown', unlock);
+            };
+            window.addEventListener('pointerdown', unlock, { once: true });
+            window.addEventListener('keydown', unlock, { once: true });
+            this._audioUnlockBound = true;
+        }
+
+        // Jeśli AudioContext już jest aktywny w momencie tworzenia sceny – uruchom natychmiast
+        if (this.sound && this.sound.context && this.sound.context.state !== 'suspended') {
+            this.audioStarted = true;
+            this._maybeStartBgm();
+        }
+
+        // Dodatkowy listener na kliknięcie w samą scenę (na wypadek jeśli globalny zostanie przechwycony wcześniej)
+        this.input.once('pointerdown', () => {
+            if (!this.audioStarted && this.sound.context.state === 'suspended') {
+                this.sound.context.resume().then(() => {
+                    this.audioStarted = true; this._maybeStartBgm();
+                }).catch(() => { });
+            } else if (!this.bgm && !this.bgmDisabled) {
+                this.audioStarted = true; this._maybeStartBgm();
+            }
+        });
+
+        // Komunikat diagnostyczny jeśli brak startu po 2s
+        this.time.delayedCall(2000, () => {
+            if (!this.bgm && !this.bgmDisabled) {
+                this.showMessage('Kliknij aby włączyć audio', this.player.x, this.player.y - 60, '#e67e22');
+            }
+        });
+
+        // Kilka prób automatycznych jeśli audio odblokowane później
+        this._bgmRetryCount = 0;
+        this.time.addEvent({
+            delay: 1500,
+            repeat: 4,
+            callback: () => {
+                if (this.bgm || this.bgmDisabled) return;
+                if (this.sound.context.state !== 'suspended') {
+                    this.audioStarted = true;
+                    this._maybeStartBgm();
+                }
+                this._bgmRetryCount++;
+            }
+        });
+
+        // Debug: Shift+M wymusza start
+        this.input.keyboard.on('keydown-M', (ev) => {
+            if (ev.shiftKey) {
+                // Force BGM start (debug key) – log suppressed
+                this.bgmDisabled = false;
+                this.audioStarted = true;
+                this._maybeStartBgm();
+            }
+        });
+
         // Ustaw granice świata (50x50 kafelków po 32px)
         // Ograniczenie dolnego obszaru o 160px dla UI paska umiejętności
         const restrictedHeight = 50 * 32 - 160; // Zmniejsz wysokość o 160px dla UI
@@ -42,6 +189,36 @@ export default class GameScene extends Phaser.Scene {
 
         // Klawisze sterowania
         this.setupControls();
+        // Dodaj przełącznik muzyki (N) – tylko jeśli plik został załadowany
+        if (!this.keys) this.keys = {};
+        this.keys.musicToggle = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.N);
+        this.keys.musicToggle.on('down', () => {
+            if (this.bgm && this.bgm.isPlaying) {
+                // Fade out przed zatrzymaniem
+                const ref = this.bgm;
+                this.tweens.add({
+                    targets: ref,
+                    volume: 0,
+                    duration: 1000,
+                    ease: 'Sine.easeInOut',
+                    onComplete: () => {
+                        if (ref && ref.isPlaying) ref.stop();
+                        if (ref) ref.destroy();
+                        if (this.bgm === ref) this.bgm = null;
+                    }
+                });
+                this.bgmDisabled = true;
+                this.showMessage('Muzyka: OFF (fade)', this.player.x, this.player.y - 50, '#e74c3c');
+            } else {
+                this.bgmDisabled = false;
+                this._maybeStartBgm();
+                if (this.bgm) {
+                    this.showMessage('Muzyka: ON (fade)', this.player.x, this.player.y - 50, '#2ecc71');
+                } else {
+                    this.showMessage('Muzyka: brak pliku', this.player.x, this.player.y - 50, '#e67e22');
+                }
+            }
+        });
 
         // Setup debug hotkey after this.keys is created
         this.setupDebugMode();
@@ -692,6 +869,8 @@ export default class GameScene extends Phaser.Scene {
         // Sprawdź czy był awans poziomu
         if (GameState.justLeveledUp) {
             GameState.justLeveledUp = false;
+            // Odtwórz dźwięk awansu poziomu
+            this.playSound('level_up');
             this.scene.pause();
             this.scene.launch('LevelUpScene', { level: GameState.player.level });
         }
@@ -712,18 +891,36 @@ export default class GameScene extends Phaser.Scene {
         // Poruszanie gracza (WASD + strzałki) - tylko jeśli gracz żyje
         const speed = 200;
         this.player.setVelocity(0);
+        let isMoving = false;
 
         if (!this.playerIsDead) {
             if (this.keys.up.isDown || this.keys.upArrow.isDown) {
                 this.player.setVelocityY(-speed);
+                isMoving = true;
             } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
                 this.player.setVelocityY(speed);
+                isMoving = true;
             }
 
             if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
                 this.player.setVelocityX(-speed);
+                isMoving = true;
             } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
                 this.player.setVelocityX(speed);
+                isMoving = true;
+            }
+
+            // Uruchom audio przy pierwszym ruchu
+            if (isMoving && !this.audioStarted) {
+                this.startAudioContext();
+            }
+        }
+
+        // Dźwięki kroków
+        if (isMoving) {
+            if (!this.lastFootstep || Date.now() - this.lastFootstep > 400) {
+                this.playSound('footstep');
+                this.lastFootstep = Date.now();
             }
         }
 
@@ -765,6 +962,10 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
 
+        // Odtwórz dźwięk ataku
+        this.startAudioContext(); // Uruchom audio przy pierwszej akcji
+        this.playSound('attack_sound');
+
         const attackRange = 50;
         const damage = 20 + GameState.player.attributes.strength * 2;
 
@@ -803,6 +1004,9 @@ export default class GameScene extends Phaser.Scene {
             this.showMessage('Niewystarczająco many!', this.player.x, this.player.y - 50);
             return;
         }
+
+        // Odtwórz dźwięk umiejętności
+        this.playSound('skill_sound');
 
         // Odejmij manę
         GameState.player.attributes.mana -= skill.manaCost;
@@ -946,6 +1150,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     damageEnemy(enemy, damage) {
+        // Odtwórz dźwięk trafienia wroga
+        this.playSound('enemy_hit');
+
         enemy.enemyData.health -= damage;
 
         // Pokaż obrażenia
@@ -997,6 +1204,9 @@ export default class GameScene extends Phaser.Scene {
         // Odejmij obrażenia graczowi
         GameState.player.attributes.health -= damage;
 
+        // Odtwórz dźwięk otrzymywania obrażeń
+        this.playSound('player_hit');
+
         // Pokaż obrażenia nad graczem
         this.showMessage(`-${damage}`, this.player.x, this.player.y - 30, '#e74c3c');
 
@@ -1020,6 +1230,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     playerDied() {
+        // Odtwórz dźwięk śmierci gracza
+        this.playSound('player_death');
+
         // Pokaż komunikat o śmierci
         this.showMessage('ZGINĄŁEŚ!', this.player.x, this.player.y - 50, '#ff0000');
 
@@ -1034,6 +1247,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     killEnemy(enemy) {
+        // Odtwórz dźwięk śmierci wroga
+        this.playSound('enemy_death');
+
         // Dodaj doświadczenie
         GameState.addExperience(enemy.enemyData.exp);
         this.showMessage(`+${enemy.enemyData.exp} EXP`, enemy.x, enemy.y, '#f39c12');
@@ -1079,6 +1295,13 @@ export default class GameScene extends Phaser.Scene {
         });
     } collectItem(item) {
         const itemData = item.itemData;
+
+        // Odtwórz dźwięk podnoszenia przedmiotu
+        if (itemData.type === 'chest') {
+            this.playSound('chest_open');
+        } else {
+            this.playSound('item_pickup');
+        }
 
         if (itemData.type === 'potion') {
             GameState.player.attributes.health = Math.min(
@@ -1238,20 +1461,35 @@ export default class GameScene extends Phaser.Scene {
 
     showPauseMenu() {
         this.scene.pause();
-        this.scene.launch('PauseMenuScene');
+        this.scene.launch('PauseMenuScene', { showMusicHint: true });
     }
 
     showInventory() {
+        // Nie otwieraj ekwipunku jeśli gracz jest martwy
+        if (this.playerIsDead) {
+            return;
+        }
+        this.playSound('menu_open');
         this.scene.pause();
         this.scene.launch('InventoryScene');
     }
 
     showQuests() {
+        // Nie otwieraj questów jeśli gracz jest martwy
+        if (this.playerIsDead) {
+            return;
+        }
+        this.playSound('menu_open');
         this.scene.pause();
         this.scene.launch('QuestScene');
     }
 
     showMap() {
+        // Nie otwieraj mapy jeśli gracz jest martwy
+        if (this.playerIsDead) {
+            return;
+        }
+        this.playSound('menu_open');
         this.scene.pause();
         this.scene.launch('MapScene');
     }

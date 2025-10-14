@@ -99,9 +99,6 @@ export default class LevelUpScene extends Phaser.Scene {
 
         // Efekty cząsteczkowe
         this.createParticles(width / 2, height / 2);
-
-        // Dźwięk (placeholder - w przyszłości można dodać prawdziwy dźwięk)
-        console.log('🎵 LEVEL UP SOUND!');
     }
 
     createParticles(x, y) {

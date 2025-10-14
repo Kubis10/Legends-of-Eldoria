@@ -6,7 +6,114 @@ export default class MainMenuScene extends Phaser.Scene {
         super({ key: 'MainMenuScene' });
     }
 
+    // Bezpieczne odtwarzanie dźwięków
+    playSound(key, config = {}) {
+        try {
+            // Jeśli audio jeszcze nieodblokowane – pomiń (unikamy ostrzeżeń autoplay)
+            if (!this.audioUnlocked) return;
+            if (this.sound.get(key)) {
+                this.sound.play(key, config);
+            } else {
+                console.warn(`Sound '${key}' not found in cache`);
+            }
+        } catch (error) {
+            console.error(`Error playing sound '${key}':`, error);
+        }
+    }
+
+    // Jednorazowa próba odblokowania audio (wywoływana z gestu użytkownika)
+    _attemptUnlockAudio() {
+        if (this.audioUnlocked || this._unlockInProgress) return;
+        const now = performance.now();
+        if (this._lastUnlockTry && (now - this._lastUnlockTry) < 300) return; // throttle 300ms
+        this._lastUnlockTry = now;
+        if (!this.sound || !this.sound.context) return;
+
+        const ctx = this.sound.context;
+        if (ctx.state === 'running') {
+            this.audioUnlocked = true;
+            this._removeUnlockHint();
+            return;
+        }
+
+        this._unlockInProgress = true;
+        ctx.resume()
+            .then(() => {
+                if (ctx.state === 'running') {
+                    this.audioUnlocked = true;
+                    this._removeUnlockHint();
+                } else {
+                    this._fallbackSilentUnlock();
+                }
+            })
+            .catch(() => {
+                this._fallbackSilentUnlock();
+            })
+            .finally(() => { this._unlockInProgress = false; });
+    }
+
+    // Ciche odtworzenie krótkiego bufora, aby wymusić start (czasem potrzebne w mobile)
+    _fallbackSilentUnlock() {
+        if (this.audioUnlocked || !this.sound?.context) return;
+        const ctx = this.sound.context;
+        try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            gain.gain.value = 0.0001; // niesłyszalne
+            osc.connect(gain).connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.05);
+            // Po krótkiej chwili sprawdź stan
+            setTimeout(() => {
+                if (ctx.state === 'running') {
+                    this.audioUnlocked = true;
+                    this._removeUnlockHint();
+                } else {
+                    // jeśli nadal nie – pokaż podpowiedź (pozostaw)
+                }
+            }, 120);
+        } catch (_) { /* ignoruj */ }
+    }
+
     create() {
+        // Stan audio
+        this.audioUnlocked = this.sound?.context?.state === 'running';
+        this._unlockInProgress = false;
+
+        // Dodatkowy fallback: jednorazowy DOM click/touchend
+        if (!this._domAudioUnlockBound) {
+            const domUnlock = (e) => {
+                if (e && e.isTrusted === false) return;
+                this._attemptUnlockAudio();
+                if (this.audioUnlocked) {
+                    document.body.removeEventListener('click', domUnlock);
+                    document.body.removeEventListener('touchend', domUnlock);
+                    this._domAudioUnlockBound = false;
+                }
+            };
+            document.body.addEventListener('click', domUnlock, { once: false });
+            document.body.addEventListener('touchend', domUnlock, { once: false });
+            this._domAudioUnlockBound = true;
+        }
+
+        // Jednorazowe (ale elastyczne) nasłuchiwanie gestów
+        if (!this._audioUnlockBound) {
+            const gestureUnlock = (pointerOrEvent) => {
+                // ignoruj niepewne / syntetyczne zdarzenia
+                if (pointerOrEvent && pointerOrEvent.isTrusted === false) return;
+                this._attemptUnlockAudio();
+            };
+            // pointerup często lepiej mapuje się na realny gest (zwłaszcza mobile)
+            this.input.on('pointerup', gestureUnlock);
+            this.input.keyboard?.on('keydown', gestureUnlock);
+            this._audioUnlockBound = true;
+        }
+
+        // Hint do kliknięcia (jeśli jeszcze nie odblokowano w ciągu ~150ms)
+        this.time.delayedCall(150, () => {
+            if (!this.audioUnlocked) this._showUnlockHint();
+        });
+
         const { width, height } = this.cameras.main;
 
         // Tło
@@ -104,6 +211,12 @@ export default class MainMenuScene extends Phaser.Scene {
         });
 
         bg.on('pointerdown', () => {
+            // Jednorazowa próba odblokowania audio (w ramach gestu)
+            this._attemptUnlockAudio();
+
+            // Odtwórz dźwięk kliknięcia (tylko jeśli już odblokowano)
+            this.playSound('button_click');
+
             this.tweens.add({
                 targets: button,
                 scale: 0.95,
@@ -112,7 +225,6 @@ export default class MainMenuScene extends Phaser.Scene {
                 onComplete: onClick
             });
         });
-
         return button;
     }
 
@@ -188,5 +300,39 @@ i ukończ główną fabułę oraz zadania poboczne!`;
             closeButton.destroy();
             closeText.destroy();
         });
+    }
+
+    _showUnlockHint() {
+        if (this._unlockHint || this.audioUnlocked) return;
+        const { width, height } = this.cameras.main;
+        this._unlockHint = this.add.text(width / 2, height - 80, 'Kliknij dowolnie, aby włączyć dźwięk', {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            color: '#f1c40f'
+        }).setOrigin(0.5).setAlpha(0.85);
+        this.tweens.add({
+            targets: this._unlockHint,
+            alpha: { from: 0.4, to: 0.9 },
+            duration: 1000,
+            yoyo: true,
+            repeat: -1
+        });
+    }
+
+    _removeUnlockHint() {
+        if (!this._unlockHint) return;
+        this._unlockHint.destroy();
+        this._unlockHint = null;
+        // Po skutecznym odblokowaniu usuń listeners (już niepotrzebne)
+        if (this._audioUnlockBound) {
+            this.input.off('pointerup');
+            this.input.keyboard?.off('keydown');
+            this._audioUnlockBound = false;
+        }
+        if (this._domAudioUnlockBound) {
+            document.body.removeEventListener('click', this._attemptUnlockAudio);
+            document.body.removeEventListener('touchend', this._attemptUnlockAudio);
+            this._domAudioUnlockBound = false;
+        }
     }
 }

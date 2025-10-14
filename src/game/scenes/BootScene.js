@@ -6,21 +6,107 @@ export default class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        // Ładowanie ekranu ładowania
-        this.load.on('progress', (value) => {
-            console.log('Loading:', value);
-        });
-
-        this.load.on('complete', () => {
-            console.log('Loading complete');
-        });
-
-        // Tutaj wygeneruj lepsze (proceduralne) assety gry
+        // Wygeneruj assety graficzne
         this.createGeneratedAssets();
+        // Załaduj muzykę tła (z pliku, nie generowana)
+        this.load.audio('bgm_main', 'audio/bgm_main.mp3');
+
+        // Wygeneruj podstawowe efekty dźwiękowe (bez muzyki tła)
+        this.createSoundEffects();
+
     }
 
     create() {
         this.scene.start('MainMenuScene');
+    }
+
+    // ====== DŹWIĘKI (PROSTE EFEKTY) ======
+    createSoundEffects() {
+        if (!this.sound.context) {
+            console.warn('Web Audio API not available - skipping SFX generation');
+            return;
+        }
+        try {
+            this.createSfx('attack_sound', [220, 180, 140], 0.25);
+            this.createSfx('enemy_hit', [160, 120, 90], 0.25);
+            this.createSfx('player_hit', [120, 90, 70], 0.3);
+            this.createSfx('enemy_death', [200, 150, 100, 60], 0.5);
+            this.createSfx('level_up', [440, 550, 660, 880], 0.4);
+            this.createSfx('item_pickup', [600, 750], 0.25);
+            this.createSfx('button_click', [400, 300], 0.15);
+            this.createSfx('menu_open', [500, 420, 380], 0.2);
+            this.createSfx('footstep', [90, 70], 0.08, 0.05);
+            this.createSfx('chest_open', [300, 380, 450, 520], 0.35, 0.1);
+            this.createSfx('skill_sound', [520, 610, 700], 0.3);
+            this.createSfx('player_death', [200, 150, 100, 60, 40], 0.6, 0.05);
+        } catch (e) {
+            console.error('Error generating SFX:', e);
+        }
+    }
+
+    createSfx(key, freqs, baseVolume = 0.3, noise = 0) {
+        const ctx = this.sound.context;
+        if (!ctx) return;
+        const sampleRate = 22050;
+        const duration = 0.4; // seconds
+        const length = Math.floor(sampleRate * duration);
+        const buffer = ctx.createBuffer(1, length, sampleRate);
+        const data = buffer.getChannelData(0);
+
+        // Render simple tone sequence
+        let cursor = 0;
+        const partLength = Math.floor(length / freqs.length);
+        freqs.forEach((f, idx) => {
+            for (let i = 0; i < partLength && cursor < length; i++, cursor++) {
+                const t = i / partLength;
+                const env = Math.min(1, t * 8) * (1 - t); // attack-decay
+                let sample = Math.sin(2 * Math.PI * f * (cursor / sampleRate));
+                if (noise > 0) {
+                    sample = sample * (1 - noise) + (Math.random() * 2 - 1) * noise;
+                }
+                data[cursor] = sample * env * baseVolume;
+            }
+        });
+
+        this.cache.audio.add(key, buffer);
+        this.sound.add(key, { volume: 1, loop: false });
+    }
+
+    createMelody(key, notes, loop) {
+        try {
+            const sampleRate = 22050;
+            const totalDuration = notes.reduce((sum, note) => sum + note.duration, 0);
+            const length = Math.floor(sampleRate * totalDuration);
+
+            if (!this.sound.context) {
+                console.warn(`Cannot create melody ${key} - Web Audio API not available`);
+                return;
+            }
+
+            const audioBuffer = this.sound.context.createBuffer(1, length, sampleRate);
+            const channelData = audioBuffer.getChannelData(0);
+
+            let currentSample = 0;
+            for (const note of notes) {
+                const noteSamples = Math.floor(sampleRate * note.duration);
+                for (let i = 0; i < noteSamples; i++) {
+                    if (currentSample < length) {
+                        const envelope = Math.min(1, Math.min(i / (sampleRate * 0.05), (noteSamples - i) / (sampleRate * 0.05)));
+                        channelData[currentSample] = Math.sin(2 * Math.PI * note.freq * i / sampleRate) * envelope * 0.1;
+                        currentSample++;
+                    }
+                }
+            }
+
+            this.cache.audio.add(key, audioBuffer);
+
+            this.sound.add(key, {
+                volume: 0.3,
+                loop: loop
+            });
+        } catch (error) {
+            console.error(`Error creating melody ${key}:`, error);
+        }
     }
 
     createGeneratedAssets() {

@@ -41,6 +41,16 @@ export default class PauseMenuScene extends Phaser.Scene {
             this.exitToMenu();
         }, 0xe74c3c);
 
+        // Instrukcje sterowania (prawy górny róg ekranu)
+        this.add.text(width - 10, 10,
+            'STEROWANIE:\nWASD/Strzałki - Ruch\nSPACJA - Atak\n1-2 - Umiejętności\nE - Interakcja/Zbierz\nI - Ekwipunek\nQ - Questy\nM - Mapa\nESC - Menu', {
+            fontFamily: 'Arial',
+            fontSize: '14px',
+            color: '#ecf0f1',
+            align: 'right',
+            lineSpacing: 2
+        }).setOrigin(1, 0).setScrollFactor(0);
+
         // ESC should close the pause menu (toggle behavior)
         this._onEscDown = () => this.resumeGame();
         this._escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);

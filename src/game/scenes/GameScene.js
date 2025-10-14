@@ -10,6 +10,7 @@ export default class GameScene extends Phaser.Scene {
         this.map = null;
         this.walls = null;
         this.uiElements = {};
+        this.playerIsDead = false;
     }
 
     create() {
@@ -604,16 +605,7 @@ export default class GameScene extends Phaser.Scene {
             this.createUI();
         });
 
-        // Instrukcje (prawy górny róg)
-        const instructions = this.add.text(width - 10, 10,
-            'WASD - Ruch\nSPACJA - Atak\n1-4 - Umiejętności\nE - Interakcja/Zbierz\nI - Ekwipunek\nQ - Questy\nM - Mapa\nESC - Menu', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#ffffff',
-            align: 'right'
-        }).setOrigin(1, 0).setScrollFactor(0);
-
-        uiContainer.add(instructions); this.updateUI();
+        this.updateUI();
     }
 
     setupControls() {
@@ -622,6 +614,11 @@ export default class GameScene extends Phaser.Scene {
             down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
             left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
             right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+            // Dodaj obsługę strzałek
+            upArrow: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+            downArrow: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+            leftArrow: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+            rightArrow: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
             attack: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
             interact: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
             skill1: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
@@ -712,20 +709,22 @@ export default class GameScene extends Phaser.Scene {
         }
 
 
-        // Poruszanie gracza
+        // Poruszanie gracza (WASD + strzałki) - tylko jeśli gracz żyje
         const speed = 200;
         this.player.setVelocity(0);
 
-        if (this.keys.up.isDown) {
-            this.player.setVelocityY(-speed);
-        } else if (this.keys.down.isDown) {
-            this.player.setVelocityY(speed);
-        }
+        if (!this.playerIsDead) {
+            if (this.keys.up.isDown || this.keys.upArrow.isDown) {
+                this.player.setVelocityY(-speed);
+            } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
+                this.player.setVelocityY(speed);
+            }
 
-        if (this.keys.left.isDown) {
-            this.player.setVelocityX(-speed);
-        } else if (this.keys.right.isDown) {
-            this.player.setVelocityX(speed);
+            if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
+                this.player.setVelocityX(-speed);
+            } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
+                this.player.setVelocityX(speed);
+            }
         }
 
         // Normalizacja prędkości przy ruchu po przekątnej
@@ -761,6 +760,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     performAttack() {
+        // Nie atakuj jeśli gracz jest martwy
+        if (this.playerIsDead) {
+            return;
+        }
+
         const attackRange = 50;
         const damage = 20 + GameState.player.attributes.strength * 2;
 
@@ -786,6 +790,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     useSkill(index) {
+        // Nie używaj umiejętności jeśli gracz jest martwy
+        if (this.playerIsDead) {
+            return;
+        }
+
         const skill = GameState.player.skills[index];
         if (!skill) return;
 
@@ -960,6 +969,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     enemyAttackPlayer(enemy) {
+        // Nie atakuj martwego gracza
+        if (this.playerIsDead) {
+            return;
+        }
+
         // Sprawdź cooldown ataku (1.5 sekundy)
         const now = Date.now();
         if (enemy.lastAttack && now - enemy.lastAttack < 1500) {
@@ -995,8 +1009,9 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // Sprawdź czy gracz zginął
-        if (GameState.player.attributes.health <= 0) {
+        if (GameState.player.attributes.health <= 0 && !this.playerIsDead) {
             GameState.player.attributes.health = 0;
+            this.playerIsDead = true; // Oznacz gracza jako martwego
             this.playerDied();
         }
 
@@ -1012,6 +1027,7 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(2000, () => {
             GameState.player.attributes.health = Math.floor(GameState.player.attributes.maxHealth * 0.5);
             this.player.setPosition(400, 400); // Respawn w centrum
+            this.playerIsDead = false; // Wyczyść flagę śmierci po respawnie
             this.showMessage('Odrodzono!', this.player.x, this.player.y - 50, '#2ecc71');
             this.updateUI();
         });
@@ -1094,6 +1110,11 @@ export default class GameScene extends Phaser.Scene {
     }
 
     performInteraction() {
+        // Nie wchodź w interakcje jeśli gracz jest martwy
+        if (this.playerIsDead) {
+            return;
+        }
+
         const interactRange = 60;
 
         // Interakcja z NPC (w wiosce)

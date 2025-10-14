@@ -85,7 +85,7 @@ export default class ShopScene extends Phaser.Scene {
             align: 'center',
             backgroundColor: '#000000',
             padding: { x: 10, y: 5 }
-        }).setOrigin(0.5).setDepth(15).setScrollFactor(0);
+        }).setOrigin(0.5).setDepth(15).setScrollFactor(0).setVisible(false); // Ukryty na start
 
         // Przycisk zamknięcia (kwadratowy w prawym górnym rogu)
         this.createCloseButton(width / 2 + 370, height / 2 - 270);
@@ -243,8 +243,7 @@ export default class ShopScene extends Phaser.Scene {
 
         actionBtn.on('pointerout', () => {
             actionBtn.clearTint();
-            this.itemInfoText.setText('');
-            this.itemInfoText.setDepth(15); // Upewnij się, że depth jest zachowany
+            this.hideItemDetails();
         });
 
         actionBtn.on('pointerdown', () => {
@@ -262,8 +261,7 @@ export default class ShopScene extends Phaser.Scene {
 
         cardBg.on('pointerout', () => {
             cardBg.clearTint();
-            this.itemInfoText.setText('');
-            this.itemInfoText.setDepth(15); // Upewnij się, że depth jest zachowany
+            this.hideItemDetails();
         });
 
         this.itemsContainer.add([cardBg, iconSprite, name, price, actionBtn, btnLabel]);
@@ -292,9 +290,15 @@ export default class ShopScene extends Phaser.Scene {
         if (item.value && item.effect === 'heal') info += `❤️ Leczy: ${item.value} HP  `;
         if (item.value && item.effect === 'restore_mana') info += `💙 Przywraca: ${item.value} MP`;
 
-        // Ustawienie tekstu z wyższym priorytetem wyświetlania
+        // Ustawienie tekstu i pokazanie elementu
         this.itemInfoText.setText(info);
-        this.itemInfoText.setDepth(15); // Wyższy depth niż wszystkie inne elementy
+        this.itemInfoText.setVisible(true);
+        this.itemInfoText.setDepth(15);
+    }
+
+    hideItemDetails() {
+        // Ukryj cały element zamiast tylko czyścić tekst
+        this.itemInfoText.setVisible(false);
     }
 
     buyItem(item) {

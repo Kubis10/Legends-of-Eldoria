@@ -1,3 +1,5 @@
+<img width="1408" height="736" alt="Gemini_Generated_Image_6avnm76avnm76avn" src="https://github.com/user-attachments/assets/0d6665d3-5c44-4c89-adc8-1ea2d395fc5f" />
+
 # 🎮 Legends of Eldoria
 
 ![Legends of Eldoria](https://img.shields.io/badge/Game-RPG-blueviolet)

@@ -129,16 +129,185 @@ export default class GameScene extends Phaser.Scene {
         const classKey = playerData.class.toLowerCase();
         const spriteKey = `player_${classKey}`;
 
-        this.player = this.physics.add.sprite(400, 400, spriteKey);
+        // Ustal kolor skóry na podstawie rasy i przygotuj przefarbowaną teksturę (tylko kolor głowy)
+        const raceMap = {
+            'Człowiek': 'HUMAN',
+            'Elf': 'ELF',
+            'Krasnolud': 'DWARF',
+            'Ork': 'ORC'
+        };
+        const skinColors = {
+            HUMAN: 0xfbe7b2,
+            ELF: 0xb2fbb2,
+            DWARF: 0xd1a06a,
+            ORC: 0x6ad16a
+        };
+        const raceKey = raceMap[playerData.race] || 'HUMAN';
+        const headColor = skinColors[raceKey] || 0xfbe7b2;
+
+        const recoloredKey = `${spriteKey}_head_${headColor.toString(16)}`;
+        // Automatycznie wykryj bazowy kolor głowy i przefarbuj tylko górną część (obszar głowy)
+        this.ensureRecoloredTexture(spriteKey, recoloredKey, 'autoHead', headColor, 40);
+
+        // Użyj przefarbowanej tekstury jeśli istnieje, w przeciwnym razie bazowej
+        const finalKey = this.textures.exists(recoloredKey) ? recoloredKey : spriteKey;
+        this.player = this.physics.add.sprite(400, 400, finalKey);
         this.player.setCollideWorldBounds(true);
         this.player.setScale(1);
         this.player.body.setSize(28, 28);
 
         // Dane gracza
         this.player.playerData = playerData;
-
         // Inicjalizuj aktywną obronę
         this.player.activeDefense = 0;
+    }
+
+    // Utwórz nową teksturę z podmianą koloru (np. głowy) bazując na istniejącej
+    ensureRecoloredTexture(sourceKey, newKey, fromColor, toColor, tolerance = 16) {
+        // Jeśli już istnieje – nic nie rób
+        if (this.textures.exists(newKey)) return;
+        const srcTex = this.textures.get(sourceKey);
+        if (!srcTex || !srcTex.getSourceImage) return;
+        const sourceImage = srcTex.getSourceImage();
+        if (!sourceImage || !sourceImage.width || !sourceImage.height) return;
+
+        const width = sourceImage.width;
+        const height = sourceImage.height;
+
+        // Utwórz canvasową teksturę o tych samych wymiarach i narysuj źródłowy obraz
+        const canvasTexture = this.textures.createCanvas(newKey, width, height);
+        const ctx = canvasTexture.getContext();
+        ctx.drawImage(sourceImage, 0, 0);
+
+        // Pobierz piksele i ewentualnie automatycznie wykryj kolor głowy
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const data = imgData.data;
+
+        // Region głowy: okrąg o środku (cx, cy) i promieniu r
+        const cx = Math.floor(width / 2);
+        const cy = Math.floor(height * 0.13); // 13% wysokości, empirically fits head position
+        const r = Math.floor(height * 0.11); // 11% wysokości, empirically fits head size
+
+        let fr, fg, fb;
+        if (typeof fromColor === 'string' && fromColor.toLowerCase().includes('auto')) {
+            // Histogram tylko w okręgu głowy
+            const bins = new Map();
+            for (let y = cy - r; y <= cy + r; y++) {
+                for (let x = cx - r; x <= cx + r; x++) {
+                    if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                    const dx = x - cx, dy = y - cy;
+                    if (dx * dx + dy * dy > r * r) continue;
+                    const idx = (y * width + x) * 4;
+                    const r1 = data[idx];
+                    const g1 = data[idx + 1];
+                    const b1 = data[idx + 2];
+                    const a1 = data[idx + 3];
+                    if (a1 === 0) continue;
+                    const brightness = (r1 + g1 + b1) / 3;
+                    if (brightness < 80) continue;
+                    const rq = r1 >> 3, gq = g1 >> 3, bq = b1 >> 3;
+                    const key = (rq << 10) | (gq << 5) | bq;
+                    const entry = bins.get(key) || { count: 0, rSum: 0, gSum: 0, bSum: 0 };
+                    entry.count++;
+                    entry.rSum += r1;
+                    entry.gSum += g1;
+                    entry.bSum += b1;
+                    bins.set(key, entry);
+                }
+            }
+            let best = null;
+            for (const [, v] of bins.entries()) {
+                if (!best || v.count > best.count) best = v;
+            }
+            if (best && best.count > 0) {
+                fr = Math.round(best.rSum / best.count);
+                fg = Math.round(best.gSum / best.count);
+                fb = Math.round(best.bSum / best.count);
+            } else {
+                fr = 0xff; fg = 0xff; fb = 0xff;
+            }
+        } else {
+            fr = (fromColor >> 16) & 0xff;
+            fg = (fromColor >> 8) & 0xff;
+            fb = fromColor & 0xff;
+        }
+        const tr = (toColor >> 16) & 0xff;
+        const tg = (toColor >> 8) & 0xff;
+        const tb = toColor & 0xff;
+
+        let matchCount = 0;
+        for (let y = cy - r; y <= cy + r; y++) {
+            for (let x = cx - r; x <= cx + r; x++) {
+                if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                const dx = x - cx, dy = y - cy;
+                if (dx * dx + dy * dy > r * r) continue;
+                const i = (y * width + x) * 4;
+                const r2 = data[i];
+                const g2 = data[i + 1];
+                const b2 = data[i + 2];
+                const a2 = data[i + 3];
+                if (a2 === 0) continue;
+                if (Math.abs(r2 - fr) <= tolerance && Math.abs(g2 - fg) <= tolerance && Math.abs(b2 - fb) <= tolerance) {
+                    data[i] = tr;
+                    data[i + 1] = tg;
+                    data[i + 2] = tb;
+                    matchCount++;
+                }
+            }
+        }
+
+        // Jeśli nic nie zostało przefarbowane, wykonaj fallback: wykryj bazowy kolor w całym obrazie i przefarbuj globalnie dopasowania
+        if (matchCount < 10) {
+            // Wykryj na całym obrazie najczęstszy jasny kolor
+            const binsAll = new Map();
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    const a = data[idx + 3];
+                    if (a === 0) continue;
+                    const brightness = (r + g + b) / 3;
+                    if (brightness < 80) continue;
+                    const rq = r >> 3, gq = g >> 3, bq = b >> 3;
+                    const key = (rq << 10) | (gq << 5) | bq;
+                    const entry = binsAll.get(key) || { count: 0, rSum: 0, gSum: 0, bSum: 0 };
+                    entry.count++;
+                    entry.rSum += r;
+                    entry.gSum += g;
+                    entry.bSum += b;
+                    binsAll.set(key, entry);
+                }
+            }
+            let bestAll = null;
+            for (const [, v] of binsAll.entries()) {
+                if (!bestAll || v.count > bestAll.count) bestAll = v;
+            }
+            if (bestAll && bestAll.count > 0) {
+                const afr = Math.round(bestAll.rSum / bestAll.count);
+                const afg = Math.round(bestAll.gSum / bestAll.count);
+                const afb = Math.round(bestAll.bSum / bestAll.count);
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const i2 = (y * width + x) * 4;
+                        const r2 = data[i2];
+                        const g2 = data[i2 + 1];
+                        const b2 = data[i2 + 2];
+                        const a2 = data[i2 + 3];
+                        if (a2 === 0) continue;
+                        if (Math.abs(r2 - afr) <= tolerance && Math.abs(g2 - afg) <= tolerance && Math.abs(b2 - afb) <= tolerance) {
+                            data[i2] = tr;
+                            data[i2 + 1] = tg;
+                            data[i2 + 2] = tb;
+                        }
+                    }
+                }
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        canvasTexture.refresh();
     }
 
     createEnemies() {
@@ -400,21 +569,39 @@ export default class GameScene extends Phaser.Scene {
 
         uiContainer.add(skillsPanel);
 
-        // Wyświetlanie umiejętności
+        // Wyświetlanie umiejętności z ograniczeniem szerokości i wordWrap
+        const slotWidth = 110;
         GameState.player.skills.forEach((skill, index) => {
-            const skillX = width / 2 - 220 + index * 120;
-            const skillButton = this.add.image(skillX + 50, skillsY + 35, 'ui_slot_wide')
+            const skillX = width / 2 - 220 + index * slotWidth;
+            const skillButton = this.add.image(skillX + 55, skillsY + 35, 'ui_slot_wide')
                 .setOrigin(0.5)
                 .setScrollFactor(0);
 
-            const skillText = this.add.text(skillX + 50, skillsY + 35, `${index + 1}\n${skill.name}`, {
+            // Automatyczne łamanie tekstu i mniejsza czcionka dla długich nazw
+            let skillFontSize = skill.name.length > 14 ? 10 : 12;
+            const skillText = this.add.text(skillX + 55, skillsY + 35, `${index + 1}\n${skill.name}`, {
                 fontFamily: 'Arial',
-                fontSize: '12px',
+                fontSize: skillFontSize,
                 color: '#ffffff',
-                align: 'center'
+                align: 'center',
+                wordWrap: { width: slotWidth - 10, useAdvancedWrap: true }
             }).setOrigin(0.5).setScrollFactor(0);
 
             uiContainer.add([skillButton, skillText]);
+        });
+
+        // Dodaj czyszczenie panelu umiejętności po zamknięciu sklepu
+        this.events.on('resume', () => {
+            // Usuwanie pozostałości po panelu umiejętności
+            if (uiContainer) {
+                uiContainer.iterate(child => {
+                    if (child && child.texture && child.texture.key === 'ui_slot_wide') {
+                        child.destroy();
+                    }
+                });
+            }
+            // Odśwież panel umiejętności
+            this.createUI();
         });
 
         // Instrukcje (prawy górny róg)
@@ -524,6 +711,7 @@ export default class GameScene extends Phaser.Scene {
             this.lastManaRegen = Date.now();
         }
 
+
         // Poruszanie gracza
         const speed = 200;
         this.player.setVelocity(0);
@@ -548,6 +736,8 @@ export default class GameScene extends Phaser.Scene {
             );
         }
 
+        // Brak dodatkowej nakładki na głowę – sprite renderuje ją samodzielnie
+
         // Ręczne sprawdzanie granic dla gracza (dodatkowe zabezpieczenie)
         const restrictedHeight = 50 * 32 - 160;
         if (this.player.y > restrictedHeight - 16) {
@@ -556,14 +746,6 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // Ręczne sprawdzanie granic dla wrogów
-        this.enemies.forEach(enemy => {
-            if (enemy.y > restrictedHeight - 16) {
-                enemy.y = restrictedHeight - 16;
-                enemy.setVelocityY(0);
-            }
-        });
-
-        // Aktualizacja pasków zdrowia wrogów
         this.enemies.forEach(enemy => {
             if (enemy.healthBar) {
                 enemy.healthBar.x = enemy.x - 16;
@@ -576,7 +758,9 @@ export default class GameScene extends Phaser.Scene {
             GameState.saveGame();
             this.lastSave = Date.now();
         }
-    } performAttack() {
+    }
+
+    performAttack() {
         const attackRange = 50;
         const damage = 20 + GameState.player.attributes.strength * 2;
 

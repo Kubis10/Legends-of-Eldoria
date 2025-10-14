@@ -8,10 +8,15 @@ export default class CharacterCreationScene extends Phaser.Scene {
         this.selectedRace = 'HUMAN';
         this.selectedClass = 'WARRIOR';
         this.characterName = '';
+        this.characterSprite = null;
+        this.characterHead = null;
+        this.raceButtons = {};
+        this.classButtons = {};
     }
 
     create() {
-        const { width, height } = this.cameras.main;
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
 
         // Tło
         this.add.rectangle(0, 0, width, height, 0x16213e).setOrigin(0);
@@ -33,6 +38,16 @@ export default class CharacterCreationScene extends Phaser.Scene {
         // Sekcja klasy
         this.createClassSection(width * 3 / 4, 250);
 
+        // Podgląd wyglądu postaci na środku ekranu
+        this.renderCharacterSprite();
+
+        // Podświetl domyślnie wybrane przyciski
+        Object.keys(this.raceButtons).forEach(r => {
+            this.raceButtons[r].setSelected(r === this.selectedRace);
+        });
+        Object.keys(this.classButtons).forEach(c => {
+            this.classButtons[c].setSelected(c === this.selectedClass);
+        });
         // Podgląd statystyk
         this.statsDisplay = this.add.text(width / 2, 480, '', {
             fontFamily: 'Arial',
@@ -149,7 +164,7 @@ export default class CharacterCreationScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const races = Object.keys(GAME_CONFIG.RACES);
-        const raceButtons = {};
+        this.raceButtons = {};
 
         races.forEach((race, index) => {
             const raceData = GAME_CONFIG.RACES[race];
@@ -160,13 +175,14 @@ export default class CharacterCreationScene extends Phaser.Scene {
                 race === this.selectedRace,
                 () => {
                     this.selectedRace = race;
-                    races.forEach(r => {
-                        raceButtons[r].setSelected(r === race);
+                    Object.keys(this.raceButtons).forEach(r => {
+                        this.raceButtons[r].setSelected(r === race);
                     });
                     this.updateStatsDisplay();
+                    this.renderCharacterSprite();
                 }
             );
-            raceButtons[race] = button;
+            this.raceButtons[race] = button;
         });
     }
 
@@ -179,7 +195,7 @@ export default class CharacterCreationScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const classes = Object.keys(GAME_CONFIG.CLASSES);
-        const classButtons = {};
+        this.classButtons = {};
 
         classes.forEach((charClass, index) => {
             const classData = GAME_CONFIG.CLASSES[charClass];
@@ -190,13 +206,14 @@ export default class CharacterCreationScene extends Phaser.Scene {
                 charClass === this.selectedClass,
                 () => {
                     this.selectedClass = charClass;
-                    classes.forEach(c => {
-                        classButtons[c].setSelected(c === charClass);
+                    Object.keys(this.classButtons).forEach(c => {
+                        this.classButtons[c].setSelected(c === charClass);
                     });
                     this.updateStatsDisplay();
+                    this.renderCharacterSprite();
                 }
             );
-            classButtons[charClass] = button;
+            this.classButtons[charClass] = button;
         });
     }
 
@@ -234,10 +251,132 @@ export default class CharacterCreationScene extends Phaser.Scene {
         bg.on('pointerdown', onClick);
 
         container.setSelected = (isSelected) => {
-            if (isSelected) bg.setTint(0x70e1a8); else bg.clearTint();
+            if (isSelected) bg.setTint(0xf39c12); else bg.clearTint();
         };
 
         return container;
+    }
+
+    renderCharacterSprite() {
+        const { width } = this.cameras.main;
+        // Usuń poprzedni sprite jeśli istnieje
+        if (this.characterSprite) {
+            this.characterSprite.destroy();
+        }
+        // Dobierz sprite na podstawie klasy
+        const classKey = this.selectedClass.toLowerCase();
+        const spriteKey = `player_${classKey}`;
+
+        // Kolor skóry dla wybranej rasy
+        const skinColors = {
+            HUMAN: 0xfbe7b2,
+            ELF: 0xb2fbb2,
+            DWARF: 0xd1a06a,
+            ORC: 0x6ad16a
+        };
+        const headColor = skinColors[this.selectedRace] || 0xfbe7b2;
+        const recoloredKey = `${spriteKey}_head_${headColor.toString(16)}`;
+        // Automatycznie wykryj bazowy kolor głowy i przefarbuj tylko region głowy
+        this.ensureRecoloredTexture(spriteKey, recoloredKey, 'autoHead', headColor, 40);
+        const finalKey = this.textures.exists(recoloredKey) ? recoloredKey : spriteKey;
+        // Wyświetl sprite postaci na środku ekranu
+        this.characterSprite = this.add.sprite(width / 2, 340, finalKey).setScale(2).setOrigin(0.5);
+
+        // Podgląd opiera się wyłącznie na sprite – bez dodatkowej nakładki głowy
+    }
+
+    ensureRecoloredTexture(sourceKey, newKey, fromColor, toColor, tolerance = 16) {
+        if (this.textures.exists(newKey)) return;
+        const srcTex = this.textures.get(sourceKey);
+        if (!srcTex || !srcTex.getSourceImage) return;
+        const sourceImage = srcTex.getSourceImage();
+        if (!sourceImage || !sourceImage.width || !sourceImage.height) return;
+
+        const width = sourceImage.width;
+        const height = sourceImage.height;
+
+        const canvasTexture = this.textures.createCanvas(newKey, width, height);
+        const ctx = canvasTexture.getContext();
+        ctx.drawImage(sourceImage, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const data = imgData.data;
+
+        // Region głowy (środek górnej części obrazka, koło)
+        const headCenterX = Math.floor(width / 2);
+        const headCenterY = Math.floor(height * 0.22);
+        const headRadius = Math.floor(Math.min(width, height) * 0.22);
+
+        let fr, fg, fb;
+        if (typeof fromColor === 'string' && fromColor.toLowerCase().includes('auto')) {
+            // Auto-detect base color in circular head region
+            const bins = new Map();
+            for (let y = headCenterY - headRadius; y <= headCenterY + headRadius; y++) {
+                for (let x = headCenterX - headRadius; x <= headCenterX + headRadius; x++) {
+                    if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                    const dx = x - headCenterX;
+                    const dy = y - headCenterY;
+                    if (dx * dx + dy * dy > headRadius * headRadius) continue;
+                    const idx = (y * width + x) * 4;
+                    const r = data[idx];
+                    const g = data[idx + 1];
+                    const b = data[idx + 2];
+                    const a = data[idx + 3];
+                    if (a === 0) continue;
+                    const brightness = (r + g + b) / 3;
+                    if (brightness < 80) continue;
+                    const rq = r >> 3, gq = g >> 3, bq = b >> 3;
+                    const key = (rq << 10) | (gq << 5) | bq;
+                    const entry = bins.get(key) || { count: 0, rSum: 0, gSum: 0, bSum: 0 };
+                    entry.count++;
+                    entry.rSum += r;
+                    entry.gSum += g;
+                    entry.bSum += b;
+                    bins.set(key, entry);
+                }
+            }
+            let best = null;
+            for (const [, v] of bins.entries()) {
+                if (!best || v.count > best.count) best = v;
+            }
+            if (best && best.count > 0) {
+                fr = Math.round(best.rSum / best.count);
+                fg = Math.round(best.gSum / best.count);
+                fb = Math.round(best.bSum / best.count);
+            } else {
+                // Domyślny bazowy kolor głowy: biel
+                fr = 0xff; fg = 0xff; fb = 0xff;
+            }
+        } else {
+            fr = (fromColor >> 16) & 0xff;
+            fg = (fromColor >> 8) & 0xff;
+            fb = fromColor & 0xff;
+        }
+        const tr = (toColor >> 16) & 0xff;
+        const tg = (toColor >> 8) & 0xff;
+        const tb = toColor & 0xff;
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const dx = x - headCenterX;
+                const dy = y - headCenterY;
+                if (dx * dx + dy * dy > headRadius * headRadius) continue;
+                const i = (y * width + x) * 4;
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const a = data[i + 3];
+                if (a === 0) continue;
+                if (Math.abs(r - fr) <= tolerance && Math.abs(g - fg) <= tolerance && Math.abs(b - fb) <= tolerance) {
+                    data[i] = tr;
+                    data[i + 1] = tg;
+                    data[i + 2] = tb;
+                }
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        canvasTexture.refresh();
     }
 
     updateStatsDisplay() {

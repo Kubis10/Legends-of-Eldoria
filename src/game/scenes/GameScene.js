@@ -14,7 +14,9 @@ export default class GameScene extends Phaser.Scene {
 
     create() {
         // Ustaw granice świata (50x50 kafelków po 32px)
-        this.physics.world.setBounds(0, 0, 50 * 32, 50 * 32);
+        // Ograniczenie dolnego obszaru o 160px dla UI paska umiejętności
+        const restrictedHeight = 50 * 32 - 160; // Zmniejsz wysokość o 160px dla UI
+        this.physics.world.setBounds(0, 0, 50 * 32, restrictedHeight);
 
         // Tworzenie prostej mapy
         this.createMap();        // Tworzenie gracza
@@ -34,7 +36,8 @@ export default class GameScene extends Phaser.Scene {
         // Kamera śledzi gracza
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.setZoom(1);
-        this.cameras.main.setBounds(0, 0, 50 * 32, 50 * 32); // Granice kamery
+        // Ustaw granice kamery zgodnie z ograniczonym obszarem
+        this.cameras.main.setBounds(0, 0, 50 * 32, restrictedHeight);
 
         // Klawisze sterowania
         this.setupControls();
@@ -133,6 +136,9 @@ export default class GameScene extends Phaser.Scene {
 
         // Dane gracza
         this.player.playerData = playerData;
+
+        // Inicjalizuj aktywną obronę
+        this.player.activeDefense = 0;
     }
 
     createEnemies() {
@@ -216,6 +222,15 @@ export default class GameScene extends Phaser.Scene {
                 loop: true
             });
 
+            // Ustaw kolizje dla wroga
+            this.physics.add.collider(enemy, this.walls);
+            enemy.setCollideWorldBounds(true);
+
+            // Dodaj kolizję wroga z graczem (atak wroga)
+            this.physics.add.overlap(this.player, enemy, () => {
+                this.enemyAttackPlayer(enemy);
+            });
+
             this.enemies.push(enemy);
         }
 
@@ -258,6 +273,15 @@ export default class GameScene extends Phaser.Scene {
             };
 
             boss.healthBar = this.createHealthBar(boss, bossData.health);
+
+            // Ustaw kolizje dla bossa
+            this.physics.add.collider(boss, this.walls);
+            boss.setCollideWorldBounds(true);
+
+            // Dodaj kolizję bossa z graczem (atak bossa)
+            this.physics.add.overlap(this.player, boss, () => {
+                this.enemyAttackPlayer(boss);
+            });
 
             // Boss pozostaje w miejscu
             this.enemies.push(boss);
@@ -468,14 +492,6 @@ export default class GameScene extends Phaser.Scene {
         // Kolizje gracza ze ścianami
         this.physics.add.collider(this.player, this.walls);
 
-        // Kolizje wrogów ze ścianami (sprawdź czy wróg jest aktywny)
-        this.enemies.forEach(enemy => {
-            if (enemy && enemy.active && enemy.body) {
-                this.physics.add.collider(enemy, this.walls);
-                enemy.setCollideWorldBounds(true); // Dodaj granice świata
-            }
-        });
-
         // Kolizje gracza z przedmiotami (sprawdź czy przedmiot jest aktywny)
         this.items.forEach(item => {
             if (item && item.active && item.body) {
@@ -532,6 +548,21 @@ export default class GameScene extends Phaser.Scene {
             );
         }
 
+        // Ręczne sprawdzanie granic dla gracza (dodatkowe zabezpieczenie)
+        const restrictedHeight = 50 * 32 - 160;
+        if (this.player.y > restrictedHeight - 16) {
+            this.player.y = restrictedHeight - 16;
+            this.player.setVelocityY(0);
+        }
+
+        // Ręczne sprawdzanie granic dla wrogów
+        this.enemies.forEach(enemy => {
+            if (enemy.y > restrictedHeight - 16) {
+                enemy.y = restrictedHeight - 16;
+                enemy.setVelocityY(0);
+            }
+        });
+
         // Aktualizacja pasków zdrowia wrogów
         this.enemies.forEach(enemy => {
             if (enemy.healthBar) {
@@ -583,32 +614,142 @@ export default class GameScene extends Phaser.Scene {
         // Odejmij manę
         GameState.player.attributes.mana -= skill.manaCost;
 
-        // Wykonaj umiejętność
-        const attackRange = 100;
-        const damage = skill.damage + GameState.player.attributes.intelligence * 2;
-
-        // Znajdź wroga w zasięgu
-        let closestEnemy = null;
-        let closestDistance = attackRange;
-
-        this.enemies.forEach(enemy => {
-            const distance = Phaser.Math.Distance.Between(
-                this.player.x, this.player.y,
-                enemy.x, enemy.y
-            );
-
-            if (distance < closestDistance) {
-                closestEnemy = enemy;
-                closestDistance = distance;
-            }
-        });
-
-        if (closestEnemy) {
-            this.damageEnemy(closestEnemy, damage);
-            this.showMessage(`${skill.name}!`, this.player.x, this.player.y - 50);
+        // Sprawdź typ umiejętności
+        if (skill.defense) {
+            // Umiejętność defensywna (np. Tarcza obronna)
+            this.useDefensiveSkill(skill);
+        } else if (skill.damage) {
+            // Umiejętność ofensywna
+            this.useOffensiveSkill(skill);
+        } else {
+            // Inne umiejętności (np. leczenie, buffy)
+            this.useUtilitySkill(skill);
         }
 
         this.updateUI();
+    }
+
+    useDefensiveSkill(skill) {
+        // Aktywuj tarczę obronną na określony czas
+        const defenseBonus = skill.defense + GameState.player.attributes.strength;
+        const duration = 10000; // 10 sekund
+
+        // Dodaj tymczasową obronę
+        if (!this.player.activeDefense) {
+            this.player.activeDefense = 0;
+        }
+        this.player.activeDefense += defenseBonus;
+
+        // Wizualny efekt tarczy
+        this.showDefenseEffect();
+        this.showMessage(`${skill.name}! +${defenseBonus} obrony na 10s`, this.player.x, this.player.y - 50, '#3498db');
+
+        // Usuń obronę po czasie
+        this.time.delayedCall(duration, () => {
+            this.player.activeDefense = Math.max(0, this.player.activeDefense - defenseBonus);
+            this.showMessage('Obrona wygasła', this.player.x, this.player.y - 50, '#95a5a6');
+        });
+    }
+
+    useOffensiveSkill(skill) {
+        const attackRange = 100;
+        const damage = skill.damage + GameState.player.attributes.intelligence * 5;
+
+        if (skill.targets && skill.targets > 1) {
+            // Umiejętność atakująca wielu wrogów
+            const enemiesInRange = [];
+
+            this.enemies.forEach(enemy => {
+                const distance = Phaser.Math.Distance.Between(
+                    this.player.x, this.player.y,
+                    enemy.x, enemy.y
+                );
+
+                if (distance <= attackRange) {
+                    enemiesInRange.push({ enemy, distance });
+                }
+            });
+
+            // Posortuj po odległości i weź pierwszych N wrogów
+            enemiesInRange.sort((a, b) => a.distance - b.distance);
+            const targets = enemiesInRange.slice(0, skill.targets);
+
+            if (targets.length > 0) {
+                targets.forEach(target => {
+                    this.damageEnemy(target.enemy, damage);
+                });
+                this.showMessage(`${skill.name}! (${targets.length} celów)`, this.player.x, this.player.y - 50);
+            }
+        } else {
+            // Umiejętność atakująca jednego wroga
+            let closestEnemy = null;
+            let closestDistance = attackRange;
+
+            this.enemies.forEach(enemy => {
+                const distance = Phaser.Math.Distance.Between(
+                    this.player.x, this.player.y,
+                    enemy.x, enemy.y
+                );
+
+                if (distance < closestDistance) {
+                    closestEnemy = enemy;
+                    closestDistance = distance;
+                }
+            });
+
+            if (closestEnemy) {
+                if (skill.duration) {
+                    // Umiejętność z efektem w czasie (np. trucizna)
+                    this.applyDotEffect(closestEnemy, skill, damage);
+                } else {
+                    this.damageEnemy(closestEnemy, damage);
+                }
+                this.showMessage(`${skill.name}!`, this.player.x, this.player.y - 50);
+            }
+        }
+    }
+
+    applyDotEffect(enemy, skill, baseDamage) {
+        // Zadaj początkowe obrażenia
+        this.damageEnemy(enemy, baseDamage);
+
+        // Zastosuj efekt trucizny na określony czas
+        const dotDamage = Math.floor(baseDamage * 0.3); // 30% bazowych obrażeń co sekundę
+        let ticks = skill.duration;
+
+        const poisonInterval = this.time.addEvent({
+            delay: 1000, // Co sekundę
+            callback: () => {
+                if (enemy && enemy.active && ticks > 0) {
+                    this.damageEnemy(enemy, dotDamage);
+                    this.showMessage(`Trucizna -${dotDamage}`, enemy.x, enemy.y - 40, '#9b59b6');
+                    ticks--;
+                } else {
+                    poisonInterval.destroy();
+                }
+            },
+            repeat: skill.duration - 1
+        });
+    }
+
+    useUtilitySkill(skill) {
+        // Placeholder dla innych typów umiejętności
+        this.showMessage(`${skill.name}!`, this.player.x, this.player.y - 50, '#f39c12');
+    }
+
+    showDefenseEffect() {
+        // Wizualny efekt tarczy wokół gracza
+        const shield = this.add.graphics();
+        shield.lineStyle(3, 0x3498db, 0.8);
+        shield.strokeCircle(this.player.x, this.player.y, 40);
+
+        // Animacja znikania tarczy
+        this.tweens.add({
+            targets: shield,
+            alpha: 0,
+            duration: 2000,
+            onComplete: () => shield.destroy()
+        });
     }
 
     damageEnemy(enemy, damage) {
@@ -632,6 +773,64 @@ export default class GameScene extends Phaser.Scene {
         if (enemy.enemyData.health <= 0) {
             this.killEnemy(enemy);
         }
+    }
+
+    enemyAttackPlayer(enemy) {
+        // Sprawdź cooldown ataku (1.5 sekundy)
+        const now = Date.now();
+        if (enemy.lastAttack && now - enemy.lastAttack < 1500) {
+            return;
+        }
+        enemy.lastAttack = now;
+
+        // Oblicz obrażenia wroga
+        let damage = enemy.enemyData.damage;
+
+        // Uwzględnij aktywną obronę gracza
+        if (this.player.activeDefense && this.player.activeDefense > 0) {
+            const originalDamage = damage;
+            damage = Math.max(1, damage - this.player.activeDefense); // Minimum 1 obrażenie
+
+            if (damage < originalDamage) {
+                this.showMessage(`Zablokowano ${originalDamage - damage} obrażeń!`, this.player.x, this.player.y - 60, '#3498db');
+            }
+        }
+
+        // Odejmij obrażenia graczowi
+        GameState.player.attributes.health -= damage;
+
+        // Pokaż obrażenia nad graczem
+        this.showMessage(`-${damage}`, this.player.x, this.player.y - 30, '#e74c3c');
+
+        // Animacja obrażeń gracza
+        this.tweens.add({
+            targets: this.player,
+            alpha: 0.5,
+            duration: 150,
+            yoyo: true
+        });
+
+        // Sprawdź czy gracz zginął
+        if (GameState.player.attributes.health <= 0) {
+            GameState.player.attributes.health = 0;
+            this.playerDied();
+        }
+
+        // Aktualizuj UI
+        this.updateUI();
+    }
+
+    playerDied() {
+        // Pokaż komunikat o śmierci
+        this.showMessage('ZGINĄŁEŚ!', this.player.x, this.player.y - 50, '#ff0000');
+
+        // Respawn gracza z częścią zdrowia w bezpiecznym miejscu
+        this.time.delayedCall(2000, () => {
+            GameState.player.attributes.health = Math.floor(GameState.player.attributes.maxHealth * 0.5);
+            this.player.setPosition(400, 400); // Respawn w centrum
+            this.showMessage('Odrodzono!', this.player.x, this.player.y - 50, '#2ecc71');
+            this.updateUI();
+        });
     }
 
     killEnemy(enemy) {
@@ -674,7 +873,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.items.push(droppedItem);
 
-        // Dodaj kolizję
+        // Dodaj kolizję dla nowego przedmiotu
         this.physics.add.overlap(this.player, droppedItem, () => {
             this.collectItem(droppedItem);
         });

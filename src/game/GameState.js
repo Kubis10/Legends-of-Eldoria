@@ -43,20 +43,20 @@ class GameState {
     getInitialSkills(characterClass) {
         const skills = {
             WARRIOR: [
-                { name: 'Mocne uderzenie', damage: 20, manaCost: 10, cooldown: 0 },
-                { name: 'Tarcza obronna', defense: 15, manaCost: 15, cooldown: 0 }
+                { name: 'Mocne uderzenie', damage: 60, manaCost: 35, cooldown: 0 },
+                { name: 'Tarcza obronna', defense: 40, manaCost: 45, cooldown: 0 }
             ],
             MAGE: [
-                { name: 'Kula ognia', damage: 35, manaCost: 20, cooldown: 0 },
-                { name: 'Lodowy pocisk', damage: 25, manaCost: 15, cooldown: 0 }
+                { name: 'Kula ognia', damage: 80, manaCost: 50, cooldown: 0 },
+                { name: 'Lodowy pocisk', damage: 65, manaCost: 40, cooldown: 0 }
             ],
             ROGUE: [
-                { name: 'Szybki atak', damage: 15, manaCost: 8, cooldown: 0 },
-                { name: 'Trucizna', damage: 10, duration: 3, manaCost: 12, cooldown: 0 }
+                { name: 'Szybki atak', damage: 45, manaCost: 25, cooldown: 0 },
+                { name: 'Trucizna', damage: 35, duration: 3, manaCost: 30, cooldown: 0 }
             ],
             RANGER: [
-                { name: 'Strzał przeszywający', damage: 30, manaCost: 12, cooldown: 0 },
-                { name: 'Deszcz strzał', damage: 20, targets: 3, manaCost: 25, cooldown: 0 }
+                { name: 'Strzał przeszywający', damage: 70, manaCost: 40, cooldown: 0 },
+                { name: 'Deszcz strzał', damage: 55, targets: 3, manaCost: 60, cooldown: 0 }
             ]
         };
         return skills[characterClass] || [];

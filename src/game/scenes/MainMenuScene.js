@@ -4,6 +4,8 @@ import GameState from '../GameState';
 export default class MainMenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainMenuScene' });
+        this._domUnlockHandler = null;
+        this._gestureUnlockHandler = null;
     }
 
     // Bezpieczne odtwarzanie dźwięków
@@ -82,32 +84,36 @@ export default class MainMenuScene extends Phaser.Scene {
 
         // Dodatkowy fallback: jednorazowy DOM click/touchend
         if (!this._domAudioUnlockBound) {
-            const domUnlock = (e) => {
+            this._domUnlockHandler = (e) => {
                 if (e && e.isTrusted === false) return;
                 this._attemptUnlockAudio();
                 if (this.audioUnlocked) {
-                    document.body.removeEventListener('click', domUnlock);
-                    document.body.removeEventListener('touchend', domUnlock);
+                    document.body.removeEventListener('click', this._domUnlockHandler);
+                    document.body.removeEventListener('touchend', this._domUnlockHandler);
                     this._domAudioUnlockBound = false;
+                    this._domUnlockHandler = null;
                 }
             };
-            document.body.addEventListener('click', domUnlock, { once: false });
-            document.body.addEventListener('touchend', domUnlock, { once: false });
+            document.body.addEventListener('click', this._domUnlockHandler, { once: false });
+            document.body.addEventListener('touchend', this._domUnlockHandler, { once: false });
             this._domAudioUnlockBound = true;
         }
 
         // Jednorazowe (ale elastyczne) nasłuchiwanie gestów
         if (!this._audioUnlockBound) {
-            const gestureUnlock = (pointerOrEvent) => {
+            this._gestureUnlockHandler = (pointerOrEvent) => {
                 // ignoruj niepewne / syntetyczne zdarzenia
                 if (pointerOrEvent && pointerOrEvent.isTrusted === false) return;
                 this._attemptUnlockAudio();
             };
             // pointerup często lepiej mapuje się na realny gest (zwłaszcza mobile)
-            this.input.on('pointerup', gestureUnlock);
-            this.input.keyboard?.on('keydown', gestureUnlock);
+            this.input.on('pointerup', this._gestureUnlockHandler);
+            this.input.keyboard?.on('keydown', this._gestureUnlockHandler);
             this._audioUnlockBound = true;
         }
+
+        this.events.once('shutdown', this._cleanupAudioUnlockListeners, this);
+        this.events.once('destroy', this._cleanupAudioUnlockListeners, this);
 
         // Hint do kliknięcia (jeśli jeszcze nie odblokowano w ciągu ~150ms)
         this.time.delayedCall(150, () => {
@@ -323,16 +329,22 @@ i ukończ główną fabułę oraz zadania poboczne!`;
         if (!this._unlockHint) return;
         this._unlockHint.destroy();
         this._unlockHint = null;
-        // Po skutecznym odblokowaniu usuń listeners (już niepotrzebne)
-        if (this._audioUnlockBound) {
-            this.input.off('pointerup');
-            this.input.keyboard?.off('keydown');
+        this._cleanupAudioUnlockListeners();
+    }
+
+    _cleanupAudioUnlockListeners() {
+        if (this._audioUnlockBound && this._gestureUnlockHandler) {
+            this.input.off('pointerup', this._gestureUnlockHandler);
+            this.input.keyboard?.off('keydown', this._gestureUnlockHandler);
             this._audioUnlockBound = false;
+            this._gestureUnlockHandler = null;
         }
-        if (this._domAudioUnlockBound) {
-            document.body.removeEventListener('click', this._attemptUnlockAudio);
-            document.body.removeEventListener('touchend', this._attemptUnlockAudio);
+
+        if (this._domAudioUnlockBound && this._domUnlockHandler) {
+            document.body.removeEventListener('click', this._domUnlockHandler);
+            document.body.removeEventListener('touchend', this._domUnlockHandler);
             this._domAudioUnlockBound = false;
+            this._domUnlockHandler = null;
         }
     }
 }

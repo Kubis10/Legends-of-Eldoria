@@ -253,6 +253,11 @@ export default class MapScene extends Phaser.Scene {
         const location = LOCATIONS[locationId];
         if (!location) return;
 
+        if (GameState.currentLocation === locationId) {
+            this.showMessage('Już jesteś w tej lokacji.', 0xd4af37);
+            return;
+        }
+
         // Tylko odkryte lokacje są dostępne do podróży
         if (!GameState.discoveredLocations.includes(locationId)) {
             this.showMessage('Ta lokacja jest jeszcze zablokowana.', 0xe74c3c);
@@ -261,11 +266,6 @@ export default class MapScene extends Phaser.Scene {
 
         // Zapisz nową lokację
         GameState.currentLocation = locationId;
-
-        if (!GameState.discoveredLocations.includes(locationId)) {
-            GameState.discoveredLocations.push(locationId);
-            this.showMessage(`Odkryto nową lokację: ${location.name}!`, 0x2ecc71);
-        }
 
         GameState.saveGame();
 

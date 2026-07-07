@@ -11,6 +11,19 @@ export default class GameScene extends Phaser.Scene {
         this.walls = null;
         this.uiElements = {};
         this.playerIsDead = false;
+        this.movementPressedKeys = {
+            KeyW: false,
+            ArrowUp: false,
+            KeyS: false,
+            ArrowDown: false,
+            KeyA: false,
+            ArrowLeft: false,
+            KeyD: false,
+            ArrowRight: false
+        };
+        this._onMovementKeyDown = null;
+        this._onMovementKeyUp = null;
+        this._onWindowBlur = null;
     }
 
     // Bezpieczne odtwarzanie dźwięków
@@ -84,6 +97,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        if (!GameState.player) {
+            console.warn('No player data available, redirecting to character creation');
+            this.scene.start('CharacterCreationScene');
+            return;
+        }
+
         // Nie uruchamiaj muzyki automatycznie - poczekaj na interakcję użytkownika
         this.audioStarted = false;
         this.bgm = null;
@@ -180,6 +199,17 @@ export default class GameScene extends Phaser.Scene {
 
         // Tworzenie UI
         this.createUI();
+
+        if (!this._resumeHandlerBound) {
+            this._onSceneResume = () => {
+                this.createUI();
+                this.updateUI();
+            };
+            this.events.on('resume', this._onSceneResume);
+            this.events.once('shutdown', this.cleanupSceneListeners, this);
+            this.events.once('destroy', this.cleanupSceneListeners, this);
+            this._resumeHandlerBound = true;
+        }
 
         // Kamera śledzi gracza
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
@@ -688,10 +718,15 @@ export default class GameScene extends Phaser.Scene {
     }
 
     createUI() {
+        if (this.uiContainer) {
+            this.uiContainer.destroy(true);
+        }
+
         const { width, height } = this.cameras.main;
 
         // UI jest nieruchome względem kamery
         const uiContainer = this.add.container(0, 0).setScrollFactor(0);
+        this.uiContainer = uiContainer;
 
         // Panel gracza (lewy górny róg)
         const playerPanel = this.add.image(10 + 125, 10 + 60, 'ui_panel_small')
@@ -768,24 +803,61 @@ export default class GameScene extends Phaser.Scene {
             uiContainer.add([skillButton, skillText]);
         });
 
-        // Dodaj czyszczenie panelu umiejętności po zamknięciu sklepu
-        this.events.on('resume', () => {
-            // Usuwanie pozostałości po panelu umiejętności
-            if (uiContainer) {
-                uiContainer.iterate(child => {
-                    if (child && child.texture && child.texture.key === 'ui_slot_wide') {
-                        child.destroy();
-                    }
-                });
-            }
-            // Odśwież panel umiejętności
-            this.createUI();
-        });
-
         this.updateUI();
     }
 
+    cleanupSceneListeners() {
+        if (this._onSceneResume) {
+            this.events.off('resume', this._onSceneResume);
+            this._onSceneResume = null;
+        }
+
+        if (this._onMovementKeyDown) {
+            window.removeEventListener('keydown', this._onMovementKeyDown);
+            this._onMovementKeyDown = null;
+        }
+
+        if (this._onMovementKeyUp) {
+            window.removeEventListener('keyup', this._onMovementKeyUp);
+            this._onMovementKeyUp = null;
+        }
+
+        if (this._onWindowBlur) {
+            window.removeEventListener('blur', this._onWindowBlur);
+            this._onWindowBlur = null;
+        }
+
+        this._resumeHandlerBound = false;
+    }
+
+    mapKeyCodeToDirection(code) {
+        const map = {
+            KeyW: 'up',
+            ArrowUp: 'up',
+            KeyS: 'down',
+            ArrowDown: 'down',
+            KeyA: 'left',
+            ArrowLeft: 'left',
+            KeyD: 'right',
+            ArrowRight: 'right'
+        };
+        return map[code] || null;
+    }
+
     setupControls() {
+        // Zapobiega domyślnym akcjom przeglądarki dla klawiszy ruchu.
+        this.input.keyboard.addCapture([
+            Phaser.Input.Keyboard.KeyCodes.W,
+            Phaser.Input.Keyboard.KeyCodes.A,
+            Phaser.Input.Keyboard.KeyCodes.S,
+            Phaser.Input.Keyboard.KeyCodes.D,
+            Phaser.Input.Keyboard.KeyCodes.UP,
+            Phaser.Input.Keyboard.KeyCodes.DOWN,
+            Phaser.Input.Keyboard.KeyCodes.LEFT,
+            Phaser.Input.Keyboard.KeyCodes.RIGHT,
+            Phaser.Input.Keyboard.KeyCodes.SPACE
+        ]);
+
         this.keys = {
             up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
             down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
@@ -807,6 +879,39 @@ export default class GameScene extends Phaser.Scene {
             quests: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q),
             map: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.M)
         };
+
+        // Dodatkowa warstwa wejścia oparta o natywne zdarzenia okna.
+        // To stabilizuje kombinacje klawiszy na części klawiatur/przeglądarek.
+        this._onMovementKeyDown = (event) => {
+            const direction = this.mapKeyCodeToDirection(event.code);
+            if (!direction) return;
+            this.movementPressedKeys[event.code] = true;
+            event.preventDefault();
+        };
+
+        this._onMovementKeyUp = (event) => {
+            const direction = this.mapKeyCodeToDirection(event.code);
+            if (!direction) return;
+            this.movementPressedKeys[event.code] = false;
+            event.preventDefault();
+        };
+
+        this._onWindowBlur = () => {
+            this.movementPressedKeys = {
+                KeyW: false,
+                ArrowUp: false,
+                KeyS: false,
+                ArrowDown: false,
+                KeyA: false,
+                ArrowLeft: false,
+                KeyD: false,
+                ArrowRight: false
+            };
+        };
+
+        window.addEventListener('keydown', this._onMovementKeyDown);
+        window.addEventListener('keyup', this._onMovementKeyUp);
+        window.addEventListener('blur', this._onWindowBlur);
 
         // Obsługa ataku
         this.keys.attack.on('down', () => this.performAttack());
@@ -888,32 +993,39 @@ export default class GameScene extends Phaser.Scene {
         }
 
 
-        // Poruszanie gracza (WASD + strzałki) - tylko jeśli gracz żyje
+        // Poruszanie gracza (WASD + strzałki) - oparte o osie wejścia
+        // Zapobiega zatrzymaniu przy puszczeniu jednego z dwóch kierunków.
         const speed = 200;
-        this.player.setVelocity(0);
         let isMoving = false;
 
         if (!this.playerIsDead) {
-            if (this.keys.up.isDown || this.keys.upArrow.isDown) {
-                this.player.setVelocityY(-speed);
-                isMoving = true;
-            } else if (this.keys.down.isDown || this.keys.downArrow.isDown) {
-                this.player.setVelocityY(speed);
-                isMoving = true;
-            }
+            const leftPressed = this.movementPressedKeys.KeyA || this.movementPressedKeys.ArrowLeft || this.keys.left.isDown || this.keys.leftArrow.isDown;
+            const rightPressed = this.movementPressedKeys.KeyD || this.movementPressedKeys.ArrowRight || this.keys.right.isDown || this.keys.rightArrow.isDown;
+            const upPressed = this.movementPressedKeys.KeyW || this.movementPressedKeys.ArrowUp || this.keys.up.isDown || this.keys.upArrow.isDown;
+            const downPressed = this.movementPressedKeys.KeyS || this.movementPressedKeys.ArrowDown || this.keys.down.isDown || this.keys.downArrow.isDown;
 
-            if (this.keys.left.isDown || this.keys.leftArrow.isDown) {
-                this.player.setVelocityX(-speed);
+            const xAxis =
+                (leftPressed ? -1 : 0) +
+                (rightPressed ? 1 : 0);
+
+            const yAxis =
+                (upPressed ? -1 : 0) +
+                (downPressed ? 1 : 0);
+
+            if (xAxis !== 0 || yAxis !== 0) {
+                const moveVector = new Phaser.Math.Vector2(xAxis, yAxis).normalize().scale(speed);
+                this.player.setVelocity(moveVector.x, moveVector.y);
                 isMoving = true;
-            } else if (this.keys.right.isDown || this.keys.rightArrow.isDown) {
-                this.player.setVelocityX(speed);
-                isMoving = true;
+            } else {
+                this.player.setVelocity(0, 0);
             }
 
             // Uruchom audio przy pierwszym ruchu
             if (isMoving && !this.audioStarted) {
                 this.startAudioContext();
             }
+        } else {
+            this.player.setVelocity(0, 0);
         }
 
         // Dźwięki kroków
@@ -922,14 +1034,6 @@ export default class GameScene extends Phaser.Scene {
                 this.playSound('footstep');
                 this.lastFootstep = Date.now();
             }
-        }
-
-        // Normalizacja prędkości przy ruchu po przekątnej
-        if (this.player.body.velocity.x !== 0 && this.player.body.velocity.y !== 0) {
-            this.player.setVelocity(
-                this.player.body.velocity.x * 0.707,
-                this.player.body.velocity.y * 0.707
-            );
         }
 
         // Brak dodatkowej nakładki na głowę – sprite renderuje ją samodzielnie

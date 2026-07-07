@@ -11,6 +11,7 @@ class GameState {
         this.currency = 100;
         this.currentLocation = 'STARTING_VILLAGE';
         this.debugMode = false;
+        this.justLeveledUp = false;
     }
 
     // Tworzenie postaci gracza
@@ -64,14 +65,19 @@ class GameState {
 
     // Dodawanie doświadczenia
     addExperience(amount) {
+        if (!this.player) return;
         this.player.experience += amount;
         this.checkLevelUp();
     }
 
     checkLevelUp() {
-        const expNeeded = this.getExperienceForLevel(this.player.level);
-        if (this.player.experience >= expNeeded) {
+        if (!this.player) return;
+
+        // Pozwala na wielokrotny awans przy dużej nagrodzie EXP
+        let safetyCounter = 0;
+        while (this.player.experience >= this.getExperienceForLevel(this.player.level) && safetyCounter < 100) {
             this.levelUp();
+            safetyCounter++;
         }
     }
 
@@ -226,19 +232,53 @@ class GameState {
             currentLocation: this.currentLocation,
             timestamp: Date.now()
         };
-        localStorage.setItem('legends_of_eldoria_save', JSON.stringify(saveData));
-        return true;
+        try {
+            localStorage.setItem('legends_of_eldoria_save', JSON.stringify(saveData));
+            return true;
+        } catch (error) {
+            console.error('Failed to save game:', error);
+            return false;
+        }
+    }
+
+    isValidSaveData(data) {
+        return !!(
+            data &&
+            data.player &&
+            data.player.attributes &&
+            Array.isArray(data.inventory) &&
+            Array.isArray(data.quests) &&
+            Array.isArray(data.completedQuests) &&
+            Array.isArray(data.discoveredLocations) &&
+            typeof data.currency === 'number'
+        );
     }
 
     loadGame() {
         const savedData = localStorage.getItem('legends_of_eldoria_save');
-        if (savedData) {
+        if (!savedData) {
+            return false;
+        }
+
+        try {
             const data = JSON.parse(savedData);
+            if (!this.isValidSaveData(data)) {
+                console.warn('Invalid save data detected, removing save');
+                this.deleteSave();
+                return false;
+            }
+
             Object.assign(this, data);
             if (!this.currentLocation) this.currentLocation = 'STARTING_VILLAGE';
+            if (!this.discoveredLocations.includes('STARTING_VILLAGE')) {
+                this.discoveredLocations.unshift('STARTING_VILLAGE');
+            }
             return true;
+        } catch (error) {
+            console.error('Failed to load save data:', error);
+            this.deleteSave();
+            return false;
         }
-        return false;
     }
 
     deleteSave() {
@@ -246,7 +286,14 @@ class GameState {
     }
 
     hasSave() {
-        return localStorage.getItem('legends_of_eldoria_save') !== null;
+        const savedData = localStorage.getItem('legends_of_eldoria_save');
+        if (!savedData) return false;
+        try {
+            const data = JSON.parse(savedData);
+            return this.isValidSaveData(data);
+        } catch (_) {
+            return false;
+        }
     }
 
     // Odkrywanie lokacji (zwraca true jeśli nowo odkryta)
